@@ -10,19 +10,17 @@ battery, BOOT (refresh) and PWR (screen on/off).
 
 ## 1. Launcher ✅
 
-Home screen with app icons: **Weather** and **Settings** (later: Avatar / AI
-chat).
+Home screen with app tiles: **Weather** and **Settings** (more apps: see
+step 7).
 
 ## 2. Weather app ✅
 
-Open-Meteo covers the whole world. Requests use the selected place's time
-zone (`timezone=auto`) so sunrise/sunset are local to that place. When the
-place is in another time zone, the card also shows its local time
-(e.g. "New York · 09:05").
+Open-Meteo covers the whole world, no API key. Requests use the selected
+place's time zone (`timezone=auto`) so sunrise/sunset are local to that place.
 
-- Current conditions (as now)
+- Current conditions with animated icons; at night the moon shows its phase
 - Swipe right-to-left: 3-day forecast
-- Refresh every 15 minutes; WiFi only on when needed
+- Refresh every 15 minutes; BOOT refreshes right away
 
 ## 3. Clock and time zone ✅
 
@@ -32,12 +30,12 @@ weather location. The time zone comes from, in order:
 1. Automatic lookup by the network's public IP on each refresh (follows you
    when travelling on a phone hotspot)
 2. The phone's time zone, sent by the WiFi/location setup page
-3. Later: a manual choice in Settings (see step 7)
+3. Until one is known: the default in `Config.h` (Central European Time)
 
-DST is handled automatically; NTP keeps the time exact. Until a zone is
-known the clock shows UTC with a "Set location" hint.
+A manual choice in Settings is listed under Later. DST is handled
+automatically from the zone's rules; NTP keeps the time exact.
 
-## 4. Settings ✅ WiFi, location, display, sound, language, turn off
+## 4. Settings ✅ WiFi, location, display, sound, apps, language, turn off
 
 1. **WiFi**: when offline, a QR code joins the board's temporary access point
    (random password); once a phone joins, a second QR code opens the form at
@@ -51,10 +49,12 @@ known the clock shows UTC with a "Set location" hint.
    refreshes right away and the city name updates.
 3. **Display**: brightness slider, screen-off time (1/2/5 min, never), night
    dimming switch (22:00-07:00, on by default).
-4. **Language**: English (default) or Croatian.
-5. **Turn off**: a confirmation page with a big red button switches the
+4. **Sound**: see step 6.
+5. **Apps**: placeholder for step 7.
+6. **Language**: English (default) or Croatian, also for the phone pages.
+7. **Turn off**: a confirmation page with a big red button switches the
    board off through the PMU, also on USB (verified); PWR turns it on.
-6. The settings list scrolls with a finger, so more rows can be added below.
+The settings list scrolls with a finger, so more rows can be added below.
    Option rows are big (60 px) with tap areas that reach the next row.
 
 ## 5. Power saving and battery care ✅
@@ -109,20 +109,20 @@ else on the network can flash the board.
 
 ### 10. Battery life
 
-- Lower CPU speed and WiFi power saving while the screen is off
+- Measure first: log the battery level every 10 minutes, before and after
+- WiFi only for the periodic refresh, off in between
+- Lower CPU speed or light sleep while the screen is off
+- Fewer animation frames when nothing moves
 - Power info page: battery voltage, charging state, estimated time left
 - Turn the board off safely below ~3 % instead of letting the battery run flat
-
-### 11. Going public
-
-MIT license for the code, SIL OFL notice for the Inter font, clean git history
-(old screenshots), neutral default place. Then switch the repo to public.
 
 ## Later
 
 - Manual time zone as a fallback (the automatic one follows the network and
   is independent of the forecast place: weather for Hong Kong keeps the clock
   on local time)
+- Weather card: local time of the forecast place when it is in another time
+  zone (e.g. "New York · 09:05")
 - Network details, diagnostics, about page
 
 ## Decisions
@@ -135,5 +135,8 @@ MIT license for the code, SIL OFL notice for the Inter font, clean git history
   letters) instead of LVGL.
 - Text entry (passwords, places) happens on the phone via QR + web page, not
   on the 1.8" on-screen keyboard.
-- Before making the repo public: add an MIT license for the code and the SIL
-  OFL notice for the Inter font.
+- Code under the MIT license; third-party parts keep theirs
+  (`licenses/THIRD_PARTY.md`).
+- No personal data in the repo: WiFi passwords stay on the board (or in the
+  git-ignored `credentials.h`), screenshots use example names.
+- Big rows and generous tap areas: the screen is small.
