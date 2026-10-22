@@ -7,6 +7,10 @@ sat, trenutno vrijeme s animiranim ikonama, prognoza za 3 dana i postavke koje
 mijenjaš s mobitela skeniranjem QR koda. Bez API ključeva i bez aplikacije za
 instalirati.
 
+**Isprobano na ploči V2** (ekran CO5300). Za originalnu ploču V1 (ekran
+SH8601) postoji posebno okruženje za prevođenje, ali još nije isprobano; vidi
+[Verzije ploče](#verzije-ploče).
+
 Sustav je zadano na engleskom; u postavkama se prebacuje na hrvatski (vidi
 [Jezik](#jezik)). Nazivi na ekranu ovdje su napisani na oba jezika, npr.
 **Settings (Postavke)**.

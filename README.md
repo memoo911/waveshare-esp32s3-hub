@@ -7,6 +7,13 @@ big clock, current weather with animated icons, a 3-day forecast, and
 settings you change from your phone by scanning a QR code. No API keys, no
 app to install.
 
+**Tested on the V2 board** (CO5300 display). The original V1 board (SH8601
+display) has its own build environment but hasn't been tested yet; see
+[Board versions](#board-versions).
+
+*Waveshare ESP32-S3 Touch AMOLED 1.8" (368×448) · ESP32-S3R8 · Arduino ·
+PlatformIO · CST820 touch · AXP2101 · QMI8658 · ES8311*
+
 ![Home, weather, forecast and night screens](docs/screens.png)
 
 ## Features
