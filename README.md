@@ -326,6 +326,7 @@ commit check blocks it as well.
 The code is released under the [MIT License](LICENSE): use it, change it,
 share it. Third-party parts keep their own licenses: the Inter font (SIL Open
 Font License 1.1, [licenses/Inter-OFL.txt](licenses/Inter-OFL.txt)), the QR
-code library (MIT) and the ES8311 driver (Apache 2.0). Open-Meteo and
+code library (MIT) and the ES8311 driver (Apache 2.0); see
+[licenses/THIRD_PARTY.md](licenses/THIRD_PARTY.md). Open-Meteo and
 ip-api.com are free for non-commercial use; check their terms before using
 the clock commercially.
