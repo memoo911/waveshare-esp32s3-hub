@@ -1,0 +1,139 @@
+# Roadmap
+
+Target board: Waveshare ESP32-S3-Touch-AMOLED-1.8 V2 (CO5300, 368x448),
+3.7 V 200 mAh Li-Po.
+
+## 0. Verify the current build on hardware ✅
+
+Clock and weather: panel, WiFi, NTP, Open-Meteo, animations,
+battery, BOOT (refresh) and PWR (screen on/off).
+
+## 1. Launcher ✅
+
+Home screen with app icons: **Weather** and **Settings** (later: Avatar / AI
+chat).
+
+## 2. Weather app ✅
+
+Open-Meteo covers the whole world. Requests use the selected place's time
+zone (`timezone=auto`) so sunrise/sunset are local to that place. When the
+place is in another time zone, the card also shows its local time
+(e.g. "New York · 09:05").
+
+- Current conditions (as now)
+- Swipe right-to-left: 3-day forecast
+- Refresh every 15 minutes; WiFi only on when needed
+
+## 3. Clock and time zone ✅
+
+The clock always shows the time where the user is, independent of the
+weather location. The time zone comes from, in order:
+
+1. Automatic lookup by the network's public IP on each refresh (follows you
+   when travelling on a phone hotspot)
+2. The phone's time zone, sent by the WiFi/location setup page
+3. Later: a manual choice in Settings (see step 7)
+
+DST is handled automatically; NTP keeps the time exact. Until a zone is
+known the clock shows UTC with a "Set location" hint.
+
+## 4. Settings ✅ WiFi, location, display, sound, language, turn off
+
+1. **WiFi**: when offline, a QR code joins the board's temporary access point
+   (random password); once a phone joins, a second QR code opens the form at
+   192.168.4.1 (captive portals don't pop up reliably on Android). When
+   online, the form is served on the home network instead, so a phone can add
+   its own hotspot. Up to 5 networks, deletable on the device;
+   `credentials.h` is optional and imported once.
+2. **Location**: QR code with the board's local URL (e.g.
+   `http://192.168.1.45`); the page searches places via the Open-Meteo
+   geocoding API, lists matches, and saves the choice to NVS. Weather
+   refreshes right away and the city name updates.
+3. **Display**: brightness slider, screen-off time (1/2/5 min, never), night
+   dimming switch (22:00-07:00, on by default).
+4. **Language**: English (default) or Croatian.
+5. **Turn off**: a confirmation page with a big red button switches the
+   board off through the PMU, also on USB (verified); PWR turns it on.
+6. The settings list scrolls with a finger, so more rows can be added below.
+   Option rows are big (60 px) with tap areas that reach the next row.
+
+## 5. Power saving and battery care ✅
+
+- Screen off after 1, 2 (default) or 5 minutes without a touch or button
+  press, or never (Settings -> Display); not while the WiFi setup or location
+  page is open. A touch or the BOOT button wakes it; the waking touch doesn't
+  open anything. PWR still turns it off/on.
+- Wake when the board is picked up (QMI8658 accelerometer: tilt away from the
+  resting position or a clear jolt), only after the screen went dark by
+  itself. Works on hardware; watch for false wakes and tune
+  (`LIFT_TILT_DEG`, `LIFT_JOLT_G`) if needed.
+- Battery care: on USB, charging pauses at 100 % and resumes only when the
+  battery has dropped to 95 % (`BATTERY_CARE` in `Config.h`).
+
+## 6. Sound ✅ (hourly chime still to hear on hardware)
+
+The speaker works (ES8311 codec). No sounds on touch.
+
+- **Volume** slider in Settings → Sound, like brightness; a short note plays
+  when the finger lets go, so you hear the level
+- **Hourly chime**: two-note "ding-dong" on the full hour, on/off in
+  Settings → Sound, **off** by default, silent at night (22:00-07:00)
+
+## Next (planned order)
+
+### 7. Apps: the app switcher, kitchen timer, spirit level
+
+Settings → **Apps** lists the apps; the chosen one replaces Weather on
+the home screen (one app at a time, Settings always there). First app:
+**kitchen timer**: pick the minutes (e.g. 8:00 for pasta) with +/- buttons
+or quick presets, start, big countdown, rings at 0:00 until tapped (also when
+the screen is off; the screen wakes up). Then:
+
+- **Spirit level**: bubble level from the accelerometer (flat on a table) and
+  a bar level when standing on an edge, angles in degrees, "zero" button to
+  calibrate, screen stays on while open
+- Later: alarm clock, calculator, music player (SD card), AI agent / avatar
+
+### 8. Updates over WiFi (OTA)
+
+Upload a new version without the USB cable: from VS Code over the home
+network (PlatformIO `upload_protocol = espota`), with a password so nobody
+else on the network can flash the board.
+
+### 9. Weather extras
+
+- Today by the hour (swipe up on the weather screen): temperature and rain
+  chance for the next 12 hours
+- Optional rain warning: a short sound / notice when rain is expected within
+  the next hour
+
+### 10. Battery life
+
+- Lower CPU speed and WiFi power saving while the screen is off
+- Power info page: battery voltage, charging state, estimated time left
+- Turn the board off safely below ~3 % instead of letting the battery run flat
+
+### 11. Going public
+
+MIT license for the code, SIL OFL notice for the Inter font, clean git history
+(old screenshots), neutral default place. Then switch the repo to public.
+
+## Later
+
+- Manual time zone as a fallback (the automatic one follows the network and
+  is independent of the forecast place: weather for Hong Kong keeps the clock
+  on local time)
+- Network details, diagnostics, about page
+
+## Decisions
+
+- UI language defaults to English for anyone cloning the repo; Croatian is a
+  setting. All strings go through one translation table.
+- The clock follows the user's time zone; the forecast follows the chosen
+  place. The two are independent.
+- Keep the in-house renderer (anti-aliased shapes, Inter font with Croatian
+  letters) instead of LVGL.
+- Text entry (passwords, places) happens on the phone via QR + web page, not
+  on the 1.8" on-screen keyboard.
+- Before making the repo public: add an MIT license for the code and the SIL
+  OFL notice for the Inter font.

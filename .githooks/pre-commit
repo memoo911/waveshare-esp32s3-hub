@@ -1,0 +1,18 @@
+#!/bin/sh
+# Block commits that include WiFi credentials or built firmware.
+# Enable once per clone with: git config core.hooksPath .githooks
+
+blocked=$(git diff --cached --name-only | grep -E '(^|/)credentials\.h$|\.(bin|elf)$')
+
+if [ -n "$blocked" ]; then
+  echo ""
+  echo "Commit blocked: these files contain secrets or built firmware:"
+  echo "$blocked" | sed 's/^/  - /'
+  echo ""
+  echo "Remove them from the commit with:"
+  echo "  git restore --staged <file>"
+  echo ""
+  exit 1
+fi
+
+exit 0

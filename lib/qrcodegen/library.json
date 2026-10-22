@@ -1,0 +1,7 @@
+{
+  "name": "qrcodegen",
+  "version": "1.8.0",
+  "description": "QR Code generator library (C) by Project Nayuki, MIT License. Vendored from https://github.com/nayuki/QR-Code-generator",
+  "frameworks": "*",
+  "platforms": "*"
+}
