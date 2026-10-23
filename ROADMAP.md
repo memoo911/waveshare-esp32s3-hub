@@ -107,11 +107,17 @@ else on the network can flash the board.
 - Optional rain warning: a short sound / notice when rain is expected within
   the next hour
 
-### 10. Battery life
+### 10. Battery life (first round done, to measure on hardware)
 
-- Measure first: log the battery level every 10 minutes, before and after
-- WiFi only for the periodic refresh, off in between
-- Lower CPU speed or light sleep while the screen is off
+Done:
+- `[Power]` log line every 10 minutes (level, voltage, USB, screen, CPU, WiFi)
+- Screen off: WiFi only for the periodic refresh, off in between; CPU at
+  80 MHz; slower touch and loop polling
+- Switch off at 3 % on battery power
+
+Next, after measuring:
+- Light sleep while the screen is off (wake on touch interrupt, BOOT, a timer
+  for the IMU, chime and refresh)
 - Fewer animation frames when nothing moves
 - Power info page: battery voltage, charging state, estimated time left
 - Turn the board off safely below ~3 % instead of letting the battery run flat

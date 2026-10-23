@@ -209,6 +209,12 @@ Otvori **Postavke → Zvuk**.
   nakon pritiska na **PWR** ostaje ugašen dok ga ne dodirneš ili ne pritisneš
   tipku.
 - Dok je na ekranu QR kod za WiFi ili mjesto, ekran se ne gasi.
+- **Štednja dok je ekran ugašen**: procesor uspori, a WiFi se gasi između
+  osvježavanja prognoze svakih 15 minuta (spoji se na par sekundi, osvježi i
+  opet ugasi). Kad se ekran upali, WiFi se spoji za par sekundi. Zvono svaki
+  sat i paljenje dodirom ili podizanjem i dalje rade.
+- **Prazna baterija**: na bateriji se ploča sama ugasi na 3 %, da se Li-Po
+  nikad ne isprazni do kraja. Napuni je i pritisni **PWR**.
 - **Zaštita baterije**: dok je ploča na USB-u, punjenje staje na 100 % i
   ponovno kreće tek kad baterija padne na 95 %. U međuvremenu ploča radi s
   USB-a, pa munjica pored baterije može nedostajati iako je kabel spojen. Tako
@@ -258,6 +264,7 @@ ostaju i kad se ploča ugasi.
 | Nema zvuka | Provjeri **Postavke → Zvuk**: glasnoća iznad 0 %. Zvono je zadano isključeno i noću (22:00 do 07:00) tiho |
 | Na USB-u je, a nema munjice | Normalno zbog zaštite baterije: punjenje opet kreće na 95 % |
 | Ekran se pali sam od sebe ili se ne pali kad podigneš sat | Promijeni `LIFT_TILT_DEG` / `LIFT_JOLT_G` u `src/Config.h` (veće = manje osjetljivo) ili stavi **Gašenje ekrana → Nikad** |
+| Ploča se sama ugasila | Baterija je pala na 3 % dok nije bila na USB-u. Napuni je i pritisni **PWR** |
 | Ekran se nikad ne gasi | **Postavke → Zaslon → Gašenje ekrana** je na **Nikad**, ili je otvorena stranica s QR kodom za WiFi / mjesto |
 | Stranica za postavljanje se ne otvara na mobitelu | Skeniraj drugi QR kod ili otvori `192.168.4.1` u pregledniku. Na Samsung mobitelima pomaže da na trenutak isključiš **Postavke → Veze → Više postavki veze → Privatni DNS** |
 | Stranica za mjesto se ne učitava | Mobitel i ploča moraju biti na istom WiFi-ju |
@@ -275,8 +282,11 @@ Postoje dva ekrana. U plavoj traci odaberi odgovarajuće okruženje:
 Zadane vrijednosti su u `src/Config.h`: početno mjesto, jezik i vremenska zona
 (dok ih ne promijeniš na ploči), intervali osvježavanja, noćni sati, granice
 svjetline, zadana glasnoća i vrijeme gašenja ekrana, osjetljivost paljenja
-podizanjem (`LIFT_TILT_DEG`, `LIFT_JOLT_G`) i zaštita baterije
-(`BATTERY_CARE`, `BATTERY_FULL_PERCENT`, `BATTERY_RESUME_PERCENT`).
+podizanjem (`LIFT_TILT_DEG`, `LIFT_JOLT_G`), zaštita baterije
+(`BATTERY_CARE`, `BATTERY_FULL_PERCENT`, `BATTERY_RESUME_PERCENT`), razina
+za gašenje kod prazne baterije (`BATTERY_SHUTDOWN_PERCENT`) i štednja
+(`CPU_MHZ_SCREEN_OFF`). Svakih 10 minuta Serial Monitor ispiše red `[Power]`
+s postotkom i naponom baterije, da se vidi koliko traje.
 
 `src/credentials.h` **nije obavezan**. Ako radije upisuješ WiFi mreže u kod,
 kopiraj `src/credentials.h.example` u `src/credentials.h` i popuni ga. Mreže se

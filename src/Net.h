@@ -70,6 +70,13 @@ void forget(const char *ssid);
 // Location web page on the home network (while the Location page is open).
 void setWebWanted(bool on);
 
+// Screen off: keep WiFi off except for the periodic refresh (every
+// WEATHER_REFRESH_MS). Switching it off again reconnects right away.
+void setLowPower(bool on);
+// True while the radio is off for low power or reconnecting after it; the
+// UI treats that as connected so no WiFi warning flashes up.
+bool radioResting();
+
 // Language of the phone pages.
 void setPortalCroatian(bool hr);
 

@@ -210,6 +210,13 @@ Open **Settings → Sound**.
   the screen went dark by itself: after a **PWR** press it stays off until you
   touch it or press a button.
 - While the WiFi setup or location QR code is showing, the screen stays on.
+- **Saving power while the screen is off**: the processor slows down and
+  WiFi is switched off between the 15-minute weather refreshes (it connects
+  for a few seconds, refreshes and switches off again). When the screen comes
+  back on, WiFi reconnects within a few seconds. The hourly chime and waking
+  by touch or pick-up keep working.
+- **Low battery**: on battery power the board switches itself off at 3 %, so
+  the Li-Po never runs completely flat. Charge it and press **PWR**.
 - **Battery care**: while the board is on USB, charging stops at 100 % and
   starts again only when the battery has dropped to 95 %. Meanwhile the board
   runs from USB, so the lightning bolt next to the battery may be missing even
@@ -260,6 +267,7 @@ place are kept when the board is turned off.
 | No sound | Check **Settings → Sound**: volume above 0 %. The chime is off by default and silent from 22:00 to 07:00 |
 | On USB but no lightning bolt | Normal with battery care: charging restarts at 95 % |
 | Screen wakes up by itself, or not when picked up | Adjust `LIFT_TILT_DEG` / `LIFT_JOLT_G` in `src/Config.h` (higher = less sensitive), or set **Screen off after → Never** |
+| Board turned itself off | The battery reached 3 % on battery power. Charge it, then press **PWR** |
 | Screen never turns off | **Settings → Display → Screen off after** is set to **Never**, or the WiFi setup / location QR page is open |
 | Setup page doesn't open on the phone | Scan the second QR code, or open `192.168.4.1` in the browser. On Samsung phones, turning off **Settings → Connections → More connection settings → Private DNS** for a moment helps |
 | Location page doesn't load | Phone and board must be on the same WiFi |
@@ -277,8 +285,11 @@ Two panels exist. Pick the matching environment in the blue bar:
 Defaults live in `src/Config.h`: the starting place, language and time zone
 (used until you change them on the board), refresh intervals, night hours,
 brightness limits, default volume and screen-off time, how sensitive waking on
-pick-up is (`LIFT_TILT_DEG`, `LIFT_JOLT_G`) and battery care
-(`BATTERY_CARE`, `BATTERY_FULL_PERCENT`, `BATTERY_RESUME_PERCENT`).
+pick-up is (`LIFT_TILT_DEG`, `LIFT_JOLT_G`), battery care
+(`BATTERY_CARE`, `BATTERY_FULL_PERCENT`, `BATTERY_RESUME_PERCENT`), the
+low-battery switch-off level (`BATTERY_SHUTDOWN_PERCENT`) and power saving
+(`CPU_MHZ_SCREEN_OFF`). Every 10 minutes the serial monitor shows a
+`[Power]` line with the battery level and voltage, to see how long it lasts.
 
 `src/credentials.h` is **optional**. If you prefer to list WiFi networks in
 code, copy `src/credentials.h.example` to `src/credentials.h` and fill it in.

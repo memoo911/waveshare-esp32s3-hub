@@ -64,6 +64,17 @@ constexpr int VOLUME_DEFAULT_PERCENT = 60;
 constexpr bool BATTERY_CARE = true;
 constexpr int BATTERY_FULL_PERCENT = 100;
 constexpr int BATTERY_RESUME_PERCENT = 95;
+// On battery (no USB), switch the board off at this level instead of letting
+// the Li-Po run flat; PWR turns it on again once it's charged.
+constexpr int BATTERY_SHUTDOWN_PERCENT = 3;
+
+// ============= Power saving (screen off) =============
+// CPU clock while the screen is off (240 MHz while it's on). WiFi is only on
+// for the periodic refresh, see Net.h setLowPower().
+constexpr uint32_t CPU_MHZ_SCREEN_OFF = 80;
+// Battery level, voltage and power state in the serial log, to measure how
+// long the battery lasts.
+constexpr unsigned long POWER_LOG_MS = 10UL * 60UL * 1000UL;
 
 // ============= Hardware (Waveshare ESP32-S3-Touch-AMOLED-1.8) =============
 // Same pins as the chat-stick waveshare firmware.

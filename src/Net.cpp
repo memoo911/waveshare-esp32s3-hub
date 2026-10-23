@@ -9,6 +9,7 @@
 #include <WiFi.h>
 #include <WiFiClientSecure.h>
 #include <esp_random.h>
+#include <esp_sntp.h>
 #include <utility>
 #include <time.h>
 
@@ -57,6 +58,11 @@ char gForgetSsid[33] = "";
 volatile bool gWebWanted = false;
 volatile bool gPortalHr = false;
 volatile int gDisconnectReason = 0;
+// Screen off: WiFi only for the periodic refresh, radio off in between.
+volatile bool gLowPower = false;
+// The radio is off on purpose (low power), or reconnecting after it was:
+// the UI keeps showing "connected" instead of a WiFi warning.
+volatile bool gRadioResting = false;
 
 // --- Owned by the network task ---------------------------------------------
 Preferences prefs;
@@ -71,6 +77,7 @@ DNSServer dns;
 enum class SetupMode { None, Lan, Ap };
 SetupMode setupMode = SetupMode::None;
 bool serverRunning = false;
+bool radioOff = false; // switched off by low power
 unsigned long setupStartedMs = 0;
 String setupOptions; // nearby network names (as tappable chips)
 bool pendingSave = false;
@@ -767,6 +774,17 @@ void networkTask(void *) {
     }
 
     // --- Normal mode --------------------------------------------------------
+    // Low power with the radio off: wait until the next refresh is due.
+    if (radioOff) {
+      const bool due = !gLowPower || gRefreshRequested || (long)(now - nextFetchMs) >= 0;
+      if (!due) {
+        vTaskDelay(pdMS_TO_TICKS(200));
+        continue;
+      }
+      radioOff = false;
+      nextConnectMs = 0;
+      Serial.println(gLowPower ? "[Power] WiFi on for the refresh" : "[Power] WiFi on");
+    }
     if (WiFi.status() != WL_CONNECTED) {
       if (serverRunning) {
         server.stop();
@@ -774,10 +792,23 @@ void networkTask(void *) {
       }
       if (now >= nextConnectMs) {
         if (connectWiFi()) {
-          nextTzMs = 0;
-          gRefreshRequested = true;
+          // A reconnect after a low-power pause: the forecast is only stale
+          // if its refresh is due; the time zone keeps its hourly schedule.
+          if (!gRadioResting) {
+            nextTzMs = 0;
+            gRefreshRequested = true;
+          }
+          gRadioResting = false;
         } else {
-          nextConnectMs = millis() + WIFI_RETRY_MS;
+          gRadioResting = false;
+          // On battery with the screen off, don't keep the radio busy.
+          nextConnectMs = millis() + (gLowPower ? 5UL * 60UL * 1000UL : WIFI_RETRY_MS);
+          if (gLowPower) {
+            WiFi.disconnect(true);
+            WiFi.mode(WIFI_OFF);
+            radioOff = true;
+            nextFetchMs = nextConnectMs;
+          }
         }
       }
     } else {
@@ -811,8 +842,27 @@ void networkTask(void *) {
         serverRunning = false;
       }
       if (serverRunning) server.handleClient();
+
+      // Low power: once the refresh is done (and the clock had a moment to
+      // sync), switch the radio off until the next one.
+      if (gLowPower && !gRefreshRequested && !gRefreshing && !serverRunning &&
+          (long)(millis() - nextFetchMs) < 0) {
+        const unsigned long waitStart = millis();
+        while (sntp_get_sync_status() == SNTP_SYNC_STATUS_IN_PROGRESS &&
+               millis() - waitStart < 3000) {
+          vTaskDelay(pdMS_TO_TICKS(100));
+        }
+        if (gLowPower) {
+          Serial.printf("[Power] WiFi off, next refresh in %lu s\n",
+                        (nextFetchMs - millis()) / 1000);
+          gRadioResting = true;
+          WiFi.disconnect(true);
+          WiFi.mode(WIFI_OFF);
+          radioOff = true;
+        }
+      }
     }
-    vTaskDelay(pdMS_TO_TICKS(10));
+    vTaskDelay(pdMS_TO_TICKS(gLowPower ? 50 : 10));
   }
 }
 
@@ -905,6 +955,9 @@ void forget(const char *ssid) {
 }
 
 void setWebWanted(bool on) { gWebWanted = on; }
+
+void setLowPower(bool on) { gLowPower = on; }
+bool radioResting() { return gRadioResting; }
 void setPortalCroatian(bool hr) { gPortalHr = hr; }
 
 bool takeTimezone(char *out, size_t n) {

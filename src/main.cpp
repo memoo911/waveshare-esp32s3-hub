@@ -82,7 +82,7 @@ bool touchScrolled = false; // this touch scrolled: it is not a tap or swipe
 int dragStartX = 0, dragStartY = 0, dragStartScroll = 0;
 
 
-bool screenOn = true;
+volatile bool screenOn = true; // read by the touch task too
 uint8_t currentBrightness = 0;
 // Last touch or button press; the screen sleeps SCREEN_TIMEOUT_MS after it.
 unsigned long lastActivityMs = 0;
@@ -208,6 +208,9 @@ void setScreenOn(bool on) {
   lastActivityMs = millis();
   Serial.printf("[UI] screen %s\n", on ? "on" : "off");
   if (on) {
+    // Full speed and WiFi back first, so the screen reacts at once.
+    setCpuFrequencyMhz(240);
+    net::setLowPower(false);
     forceFullFrame = true;
     imu.disarm();
     panel->displayOn();
@@ -215,6 +218,9 @@ void setScreenOn(bool on) {
     panel->setBrightness(currentBrightness);
   } else {
     panel->displayOff();
+    // Screen off: slower CPU, WiFi only for the periodic refresh.
+    net::setLowPower(true);
+    setCpuFrequencyMhz(CPU_MHZ_SCREEN_OFF);
   }
 }
 
@@ -352,21 +358,48 @@ void pollBattery() {
   static unsigned long lastMs = 0;
   if (!pmuReady || (lastMs && millis() - lastMs < 5000)) return;
   lastMs = millis();
-  I2cLock lock;
-  const bool present = pmu.isBatteryConnect();
-  batteryPercent = present ? pmu.getBatteryPercent() : -1;
-  if (BATTERY_CARE && present && batteryPercent >= 0) {
-    if (!chargePaused && batteryPercent >= BATTERY_FULL_PERCENT) {
-      pmu.disableCellbatteryCharge();
-      chargePaused = true;
-      Serial.printf("[PMU] battery %d%%, charging paused\n", batteryPercent);
-    } else if (chargePaused && batteryPercent <= BATTERY_RESUME_PERCENT) {
-      pmu.enableCellbatteryCharge();
-      chargePaused = false;
-      Serial.printf("[PMU] battery %d%%, charging resumed\n", batteryPercent);
+  bool shutDown = false;
+  {
+    I2cLock lock;
+    const bool present = pmu.isBatteryConnect();
+    batteryPercent = present ? pmu.getBatteryPercent() : -1;
+    const bool usb = pmu.isVbusIn();
+    // Battery almost empty and nothing charging it: switch off (two readings
+    // in a row, so one odd value right after start can't do it).
+    static int lowReadings = 0;
+    if (present && !usb && batteryPercent >= 0 && batteryPercent <= BATTERY_SHUTDOWN_PERCENT) {
+      lowReadings++;
+    } else {
+      lowReadings = 0;
     }
+    shutDown = lowReadings >= 2;
+    // Power log, to see how fast the battery drains.
+    static unsigned long lastLogMs = 0;
+    if (lastLogMs == 0 || millis() - lastLogMs >= POWER_LOG_MS) {
+      lastLogMs = millis();
+      Serial.printf("[Power] battery %d%% %dmV usb=%d charging=%d screen=%s cpu=%luMHz wifi=%s\n",
+                    batteryPercent, present ? pmu.getBattVoltage() : 0, usb ? 1 : 0,
+                    pmu.isCharging() ? 1 : 0, screenOn ? "on" : "off",
+                    static_cast<unsigned long>(getCpuFrequencyMhz()),
+                    WiFi.status() == WL_CONNECTED ? "on" : "off");
+    }
+    if (BATTERY_CARE && present && batteryPercent >= 0) {
+      if (!chargePaused && batteryPercent >= BATTERY_FULL_PERCENT) {
+        pmu.disableCellbatteryCharge();
+        chargePaused = true;
+        Serial.printf("[PMU] battery %d%%, charging paused\n", batteryPercent);
+      } else if (chargePaused && batteryPercent <= BATTERY_RESUME_PERCENT) {
+        pmu.enableCellbatteryCharge();
+        chargePaused = false;
+        Serial.printf("[PMU] battery %d%%, charging resumed\n", batteryPercent);
+      }
+    }
+    batteryCharging = pmu.isCharging();
   }
-  batteryCharging = pmu.isCharging();
+  if (shutDown) {
+    Serial.printf("[PMU] battery %d%% on battery power, turning off\n", batteryPercent);
+    turnOff();
+  }
 }
 
 void setBrightnessSetting(int percent) {
@@ -448,7 +481,8 @@ void touchTask(void *) {
     portEXIT_CRITICAL(&touchLock);
     const Gesture g = gestures.update(down, x, y, millis());
     if (g.type != GestureType::None) xQueueSend(gestureQueue, &g, 0);
-    vTaskDelay(pdMS_TO_TICKS(TOUCH_POLL_MS));
+    // Screen off: a slower check is still quick enough to wake on a touch.
+    vTaskDelay(pdMS_TO_TICKS(screenOn ? TOUCH_POLL_MS : 50));
   }
 }
 
@@ -633,7 +667,9 @@ void buildState(UiState &st, unsigned long now) {
   bool failed = false;
   unsigned long goodAt = 0;
   net::weather(s.weather, failed, goodAt);
-  s.wifiConnected = WiFi.status() == WL_CONNECTED;
+  // WiFi switched off on purpose while the screen was off counts as
+  // connected, so no warning flashes while it reconnects.
+  s.wifiConnected = WiFi.status() == WL_CONNECTED || net::radioResting();
   s.weatherStale = s.weather.valid && (failed || now - goodAt > WEATHER_STALE_MS);
   if (!s.weather.valid) {
     static char status[64];
@@ -774,7 +810,7 @@ void loop() {
   // Faster frames while the settings list is being scrolled.
   const bool scrolling = page == Page::Settings && settingsScroll != shownScroll;
   if (now - lastFrameMs < (scrolling ? 25UL : 1000UL / ANIMATION_FPS)) {
-    delay(2);
+    delay(screenOn ? 2 : 20);
     return;
   }
   lastFrameMs = now;
