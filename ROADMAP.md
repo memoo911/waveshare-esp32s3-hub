@@ -68,7 +68,7 @@ The settings list scrolls with a finger, so more rows can be added below.
   itself. Works on hardware; watch for false wakes and tune
   (`LIFT_TILT_DEG`, `LIFT_JOLT_G`) if needed.
 - Battery care: on USB, charging pauses at 100 % and resumes only when the
-  battery has dropped to 95 % (`BATTERY_CARE` in `Config.h`).
+  battery has dropped to 90 % (`BATTERY_CARE` in `Config.h`). Resuming at 95 % made it cycle every half hour: right after charging stops the voltage relaxes and the gauge shows 95-96 %.
 
 ## 6. Sound ✅ (hourly chime still to hear on hardware)
 

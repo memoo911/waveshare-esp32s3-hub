@@ -36,7 +36,7 @@ Sustav je zadano na engleskom; u postavkama se prebacuje na hrvatski (vidi
   isključiti)
 - **Gašenje ekrana**: nakon 1, 2 ili 5 minuta (ili nikad); pali se dodirom ili
   kad podigneš sat
-- **Zaštita baterije**: na USB-u punjenje staje na 100 % i kreće opet na 95 %
+- **Zaštita baterije**: na USB-u punjenje staje na 100 % i kreće opet na 90 %
 
 ## Što ti treba
 
@@ -216,7 +216,7 @@ Otvori **Postavke → Zvuk**.
 - **Prazna baterija**: na bateriji se ploča sama ugasi na 3 %, da se Li-Po
   nikad ne isprazni do kraja. Napuni je i pritisni **PWR**.
 - **Zaštita baterije**: dok je ploča na USB-u, punjenje staje na 100 % i
-  ponovno kreće tek kad baterija padne na 95 %. U međuvremenu ploča radi s
+  ponovno kreće tek kad baterija padne na 90 %. U međuvremenu ploča radi s
   USB-a, pa munjica pored baterije može nedostajati iako je kabel spojen. Tako
   se baterija ne troši kad sat stalno stoji na kabelu.
 
@@ -262,7 +262,7 @@ ostaju i kad se ploča ugasi.
 | "Ne vidim mrežu *mreža*" | Mreža nije u dometu ili je samo 5 GHz; koristi 2,4 GHz mrežu |
 | "Kriva lozinka za *mreža*?" | Obriši je na stranici WiFi i dodaj ponovno |
 | Nema zvuka | Provjeri **Postavke → Zvuk**: glasnoća iznad 0 %. Zvono je zadano isključeno i noću (22:00 do 07:00) tiho |
-| Na USB-u je, a nema munjice | Normalno zbog zaštite baterije: punjenje opet kreće na 95 % |
+| Na USB-u je, a nema munjice | Normalno zbog zaštite baterije: punjenje opet kreće na 90 % |
 | Ekran se pali sam od sebe ili se ne pali kad podigneš sat | Promijeni `LIFT_TILT_DEG` / `LIFT_JOLT_G` u `src/Config.h` (veće = manje osjetljivo) ili stavi **Gašenje ekrana → Nikad** |
 | Ploča se sama ugasila | Baterija je pala na 3 % dok nije bila na USB-u. Napuni je i pritisni **PWR** |
 | Ekran se nikad ne gasi | **Postavke → Zaslon → Gašenje ekrana** je na **Nikad**, ili je otvorena stranica s QR kodom za WiFi / mjesto |

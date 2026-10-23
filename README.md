@@ -36,7 +36,7 @@ PlatformIO · CST820 touch · AXP2101 · QMI8658 · ES8311*
   switched off)
 - **Screen sleep**: off after 1, 2 or 5 minutes (or never); a touch or picking
   the board up wakes it
-- **Battery care**: on USB, charging stops at 100 % and starts again at 95 %
+- **Battery care**: on USB, charging stops at 100 % and starts again at 90 %
 
 ## What you need
 
@@ -218,7 +218,7 @@ Open **Settings → Sound**.
 - **Low battery**: on battery power the board switches itself off at 3 %, so
   the Li-Po never runs completely flat. Charge it and press **PWR**.
 - **Battery care**: while the board is on USB, charging stops at 100 % and
-  starts again only when the battery has dropped to 95 %. Meanwhile the board
+  starts again only when the battery has dropped to 90 %. Meanwhile the board
   runs from USB, so the lightning bolt next to the battery may be missing even
   though the cable is plugged in. This keeps a clock that lives on the cable
   from wearing out its battery.
@@ -265,7 +265,7 @@ place are kept when the board is turned off.
 | "Can't find *network*" | The network is out of range or 5 GHz only; use a 2.4 GHz network |
 | "Wrong password for *network*?" | Delete it on the WiFi page and add it again |
 | No sound | Check **Settings → Sound**: volume above 0 %. The chime is off by default and silent from 22:00 to 07:00 |
-| On USB but no lightning bolt | Normal with battery care: charging restarts at 95 % |
+| On USB but no lightning bolt | Normal with battery care: charging restarts at 90 % |
 | Screen wakes up by itself, or not when picked up | Adjust `LIFT_TILT_DEG` / `LIFT_JOLT_G` in `src/Config.h` (higher = less sensitive), or set **Screen off after → Never** |
 | Board turned itself off | The battery reached 3 % on battery power. Charge it, then press **PWR** |
 | Screen never turns off | **Settings → Display → Screen off after** is set to **Never**, or the WiFi setup / location QR page is open |

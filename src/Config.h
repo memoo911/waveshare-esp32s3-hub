@@ -63,7 +63,10 @@ constexpr int VOLUME_DEFAULT_PERCENT = 60;
 // cable doesn't sit at 100 % being topped up all the time.
 constexpr bool BATTERY_CARE = true;
 constexpr int BATTERY_FULL_PERCENT = 100;
-constexpr int BATTERY_RESUME_PERCENT = 95;
+// 90 rather than 95: right after charging stops the voltage relaxes and the
+// gauge drops to 95-96 % without any real use, which restarted charging
+// every half hour.
+constexpr int BATTERY_RESUME_PERCENT = 90;
 // On battery (no USB), switch the board off at this level instead of letting
 // the Li-Po run flat; PWR turns it on again once it's charged.
 constexpr int BATTERY_SHUTDOWN_PERCENT = 3;

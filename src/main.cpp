@@ -11,7 +11,7 @@
 // - BOOT button: refresh the weather now (or wake the screen). PWR short
 //   press: screen off/on. The screen sleeps after 1/2/5 minutes idle (or
 //   never, Settings -> Display); a touch or picking the board up wakes it.
-// - Battery care: on USB, charging pauses at 100 % until 95 %.
+// - Battery care: on USB, charging pauses at 100 % until 90 %.
 // - Sound: volume slider and an optional hourly chime (Audio.cpp).
 //
 // Rendering uses two PSRAM layers: a static base (redrawn only when its
