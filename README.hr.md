@@ -35,7 +35,8 @@ Sustav je zadano na engleskom; u postavkama se prebacuje na hrvatski (vidi
 - **Baterija**: postotak i oznaka punjenja; tamniji ekran noću (može se
   isključiti)
 - **Gašenje ekrana**: nakon 1, 2 ili 5 minuta (ili nikad); pali se dodirom ili
-  kad podigneš sat
+  kad podigneš sat. Dok je ekran ugašen, čip drijema, a WiFi se pali samo za
+  osvježavanje: oko 13-14 sati na bateriji od 200 mAh
 - **Zaštita baterije**: na USB-u punjenje staje na 100 % i kreće opet na 90 %
 
 ## Što ti treba
@@ -215,6 +216,9 @@ Otvori **Postavke → Zvuk**.
   čip između provjera i drijema (light sleep), a dodir ili BOOT ga odmah
   probude. Zvono svaki sat i paljenje dodirom ili podizanjem i dalje rade. Na
   USB-u ne drijema, da Serial Monitor ostane spojen.
+- **Trajanje baterije** (baterija 200 mAh, izmjereno): s ugašenim ekranom
+  traje oko **13-14 sati** (oko 7 % na sat); s upaljenim ekranom puno kraće.
+  Isključena (**Postavke → Isključi**) ne troši ništa.
 - **Prazna baterija**: na bateriji se ploča sama ugasi na 3 %, da se Li-Po
   nikad ne isprazni do kraja. Napuni je i pritisni **PWR**.
 - **Zaštita baterije**: dok je ploča na USB-u, punjenje staje na 100 % i

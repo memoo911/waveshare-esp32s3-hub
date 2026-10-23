@@ -35,7 +35,8 @@ PlatformIO · CST820 touch · AXP2101 · QMI8658 · ES8311*
 - **Battery** level and charging indicator; dimmer screen at night (can be
   switched off)
 - **Screen sleep**: off after 1, 2 or 5 minutes (or never); a touch or picking
-  the board up wakes it
+  the board up wakes it. With the screen off the chip naps and WiFi only wakes
+  for refreshes: about 13-14 hours on the 200 mAh battery
 - **Battery care**: on USB, charging stops at 100 % and starts again at 90 %
 
 ## What you need
@@ -217,6 +218,10 @@ Open **Settings → Sound**.
   naps between checks (light sleep), waking at once on a touch or BOOT. The
   hourly chime and waking by touch or pick-up keep working. On USB it doesn't
   nap, so the serial monitor stays connected.
+- **Battery life** (200 mAh battery, measured): with the screen off the
+  battery lasts about **13-14 hours** (about 7 % per hour); with the screen on
+  it drains much faster. Switched off (**Settings → Turn off**) it uses
+  nothing.
 - **Low battery**: on battery power the board switches itself off at 3 %, so
   the Li-Po never runs completely flat. Charge it and press **PWR**.
 - **Battery care**: while the board is on USB, charging stops at 100 % and
