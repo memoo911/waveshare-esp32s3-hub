@@ -20,4 +20,7 @@ void playChime();
 // One short soft note (volume preview).
 void playBlip();
 
+// True from play*() until the sound has finished.
+bool busy();
+
 } // namespace audio

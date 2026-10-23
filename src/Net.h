@@ -76,6 +76,9 @@ void setLowPower(bool on);
 // True while the radio is off for low power or reconnecting after it; the
 // UI treats that as connected so no WiFi warning flashes up.
 bool radioResting();
+// True while low power has the radio switched off and no refresh is due, so
+// the chip may light-sleep.
+bool radioAsleep();
 
 // Language of the phone pages.
 void setPortalCroatian(bool hr);

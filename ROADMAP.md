@@ -115,10 +115,18 @@ Done:
   80 MHz; slower touch and loop polling
 - Switch off at 3 % on battery power
 
-Next, after measuring:
-- Light sleep while the screen is off (wake on touch interrupt, BOOT, a timer
-  for the IMU, chime and refresh)
+Measured (first round, screen off, on battery): about 97 % → 84 % in 38
+minutes, roughly 5 hours from full. Mostly the chip staying awake at 80 MHz.
+
+Second round (to measure):
+- Light sleep on battery with the screen off and WiFi resting: 300 ms naps,
+  woken early by the touch interrupt or BOOT; the timer wake-ups keep the
+  clock, chime, refresh schedule, PWR button and pick-up check going. Not on
+  USB, so the serial monitor stays connected.
+
+Later:
 - Fewer animation frames when nothing moves
+- Check which on-board parts (codec, touch, display rails) can be powered down
 - Power info page: battery voltage, charging state, estimated time left
 - Turn the board off safely below ~3 % instead of letting the battery run flat
 

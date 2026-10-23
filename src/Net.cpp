@@ -77,7 +77,7 @@ DNSServer dns;
 enum class SetupMode { None, Lan, Ap };
 SetupMode setupMode = SetupMode::None;
 bool serverRunning = false;
-bool radioOff = false; // switched off by low power
+volatile bool radioOff = false; // switched off by low power
 unsigned long setupStartedMs = 0;
 String setupOptions; // nearby network names (as tappable chips)
 bool pendingSave = false;
@@ -778,7 +778,9 @@ void networkTask(void *) {
     if (radioOff) {
       const bool due = !gLowPower || gRefreshRequested || (long)(now - nextFetchMs) >= 0;
       if (!due) {
-        vTaskDelay(pdMS_TO_TICKS(200));
+        // Short waits: the chip light-sleeps in between and only runs this
+        // task for a moment after each wake-up.
+        vTaskDelay(pdMS_TO_TICKS(10));
         continue;
       }
       radioOff = false;
@@ -958,6 +960,10 @@ void setWebWanted(bool on) { gWebWanted = on; }
 
 void setLowPower(bool on) { gLowPower = on; }
 bool radioResting() { return gRadioResting; }
+bool radioAsleep() {
+  return radioOff && gLowPower && !gRefreshRequested && !gSetupWanted &&
+         (long)(millis() - nextFetchMs) < -2000;
+}
 void setPortalCroatian(bool hr) { gPortalHr = hr; }
 
 bool takeTimezone(char *out, size_t n) {

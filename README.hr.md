@@ -211,8 +211,10 @@ Otvori **Postavke → Zvuk**.
 - Dok je na ekranu QR kod za WiFi ili mjesto, ekran se ne gasi.
 - **Štednja dok je ekran ugašen**: procesor uspori, a WiFi se gasi između
   osvježavanja prognoze svakih 15 minuta (spoji se na par sekundi, osvježi i
-  opet ugasi). Kad se ekran upali, WiFi se spoji za par sekundi. Zvono svaki
-  sat i paljenje dodirom ili podizanjem i dalje rade.
+  opet ugasi). Kad se ekran upali, WiFi se spoji za par sekundi. Na bateriji
+  čip između provjera i drijema (light sleep), a dodir ili BOOT ga odmah
+  probude. Zvono svaki sat i paljenje dodirom ili podizanjem i dalje rade. Na
+  USB-u ne drijema, da Serial Monitor ostane spojen.
 - **Prazna baterija**: na bateriji se ploča sama ugasi na 3 %, da se Li-Po
   nikad ne isprazni do kraja. Napuni je i pritisni **PWR**.
 - **Zaštita baterije**: dok je ploča na USB-u, punjenje staje na 100 % i
@@ -285,7 +287,7 @@ svjetline, zadana glasnoća i vrijeme gašenja ekrana, osjetljivost paljenja
 podizanjem (`LIFT_TILT_DEG`, `LIFT_JOLT_G`), zaštita baterije
 (`BATTERY_CARE`, `BATTERY_FULL_PERCENT`, `BATTERY_RESUME_PERCENT`), razina
 za gašenje kod prazne baterije (`BATTERY_SHUTDOWN_PERCENT`) i štednja
-(`CPU_MHZ_SCREEN_OFF`). Svakih 10 minuta Serial Monitor ispiše red `[Power]`
+(`CPU_MHZ_SCREEN_OFF`, `LIGHT_SLEEP`). Svakih 10 minuta Serial Monitor ispiše red `[Power]`
 s postotkom i naponom baterije, da se vidi koliko traje.
 
 `src/credentials.h` **nije obavezan**. Ako radije upisuješ WiFi mreže u kod,

@@ -213,8 +213,10 @@ Open **Settings → Sound**.
 - **Saving power while the screen is off**: the processor slows down and
   WiFi is switched off between the 15-minute weather refreshes (it connects
   for a few seconds, refreshes and switches off again). When the screen comes
-  back on, WiFi reconnects within a few seconds. The hourly chime and waking
-  by touch or pick-up keep working.
+  back on, WiFi reconnects within a few seconds. On battery the chip also
+  naps between checks (light sleep), waking at once on a touch or BOOT. The
+  hourly chime and waking by touch or pick-up keep working. On USB it doesn't
+  nap, so the serial monitor stays connected.
 - **Low battery**: on battery power the board switches itself off at 3 %, so
   the Li-Po never runs completely flat. Charge it and press **PWR**.
 - **Battery care**: while the board is on USB, charging stops at 100 % and
@@ -288,7 +290,7 @@ brightness limits, default volume and screen-off time, how sensitive waking on
 pick-up is (`LIFT_TILT_DEG`, `LIFT_JOLT_G`), battery care
 (`BATTERY_CARE`, `BATTERY_FULL_PERCENT`, `BATTERY_RESUME_PERCENT`), the
 low-battery switch-off level (`BATTERY_SHUTDOWN_PERCENT`) and power saving
-(`CPU_MHZ_SCREEN_OFF`). Every 10 minutes the serial monitor shows a
+(`CPU_MHZ_SCREEN_OFF`, `LIGHT_SLEEP`). Every 10 minutes the serial monitor shows a
 `[Power]` line with the battery level and voltage, to see how long it lasts.
 
 `src/credentials.h` is **optional**. If you prefer to list WiFi networks in

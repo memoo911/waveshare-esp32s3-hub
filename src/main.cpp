@@ -25,7 +25,9 @@
 #include <WiFi.h>
 #include <Wire.h>
 #include <XPowersLib.h>
+#include <driver/gpio.h>
 #include <esp_heap_caps.h>
+#include <esp_sleep.h>
 #include <time.h>
 
 #include "Audio.h"
@@ -97,6 +99,10 @@ unsigned long wakeReleaseMs = 0;
 int batteryPercent = -1;
 bool batteryCharging = false;
 bool chargePaused = false;
+bool usbPowered = true; // until the first battery reading
+// After a wake-up by touch or BOOT, stay awake briefly so the touch task and
+// button polling see what happened.
+unsigned long stayAwakeUntilMs = 0;
 
 TouchInput touch;
 GestureDetector gestures;
@@ -112,7 +118,7 @@ struct I2cLock {
   I2cLock() { if (i2cMutex) xSemaphoreTake(i2cMutex, portMAX_DELAY); }
   ~I2cLock() { if (i2cMutex) xSemaphoreGive(i2cMutex); }
 };
-bool fingerDown = false;
+volatile bool fingerDown = false;
 int fingerX = 0, fingerY = 0;
 Page page = Page::Home;
 Preferences prefs;
@@ -344,6 +350,29 @@ void toggleNightDim() {
   Serial.printf("[UI] night dimming %s\n", nightDim ? "on" : "off");
 }
 
+// Screen off, on battery, WiFi resting, nothing playing: light-sleep for a
+// moment. A touch (interrupt pin) or BOOT wakes the chip at once; otherwise
+// the timer does, so the clock, chime, refresh schedule, PWR button and
+// pick-up check keep running between naps.
+void lightSleepIfIdle() {
+  if (!LIGHT_SLEEP || screenOn || usbPowered || !net::radioAsleep() || audio::busy()) return;
+  if ((long)(millis() - stayAwakeUntilMs) < 0) return;
+  if (fingerDown) return;
+  const bool touchIdle = digitalRead(TOUCH_INT_PIN) == HIGH;
+  const bool bootIdle = digitalRead(BUTTON_BOOT_PIN) == HIGH;
+  if (touchIdle) gpio_wakeup_enable(static_cast<gpio_num_t>(TOUCH_INT_PIN), GPIO_INTR_LOW_LEVEL);
+  if (bootIdle) gpio_wakeup_enable(static_cast<gpio_num_t>(BUTTON_BOOT_PIN), GPIO_INTR_LOW_LEVEL);
+  esp_sleep_enable_gpio_wakeup();
+  esp_sleep_enable_timer_wakeup(LIGHT_SLEEP_MS * 1000ULL);
+  esp_light_sleep_start();
+  if (touchIdle) gpio_wakeup_disable(static_cast<gpio_num_t>(TOUCH_INT_PIN));
+  if (bootIdle) gpio_wakeup_disable(static_cast<gpio_num_t>(BUTTON_BOOT_PIN));
+  esp_sleep_disable_wakeup_source(ESP_SLEEP_WAKEUP_ALL);
+  if (esp_sleep_get_wakeup_cause() == ESP_SLEEP_WAKEUP_GPIO) {
+    stayAwakeUntilMs = millis() + 200;
+  }
+}
+
 void nextScreenOff() {
   screenOffIndex = (screenOffIndex + 1) % ui::kScreenOffChoices;
   prefs.putUChar("scroff", static_cast<uint8_t>(screenOffIndex));
@@ -364,6 +393,7 @@ void pollBattery() {
     const bool present = pmu.isBatteryConnect();
     batteryPercent = present ? pmu.getBatteryPercent() : -1;
     const bool usb = pmu.isVbusIn();
+    usbPowered = usb;
     // Battery almost empty and nothing charging it: switch off (two readings
     // in a row, so one odd value right after start can't do it).
     static int lowReadings = 0;
@@ -797,6 +827,7 @@ void loop() {
   pollBattery();
   sleepIfIdle();
   wakeOnLift();
+  lightSleepIfIdle();
 
   // Time zone from the network task (saved one at boot, detected later).
   char tz[40];

@@ -20,6 +20,7 @@ TaskHandle_t task = nullptr;
 volatile int volume = 60;
 es8311_handle_t codec = nullptr;
 bool ready = false;
+volatile bool playing = false;
 
 struct I2cGuard {
   I2cGuard() { if (i2c) xSemaphoreTake(i2c, portMAX_DELAY); }
@@ -144,6 +145,7 @@ void audioTask(void *) {
     uint32_t sound = kNone;
     xTaskNotifyWait(0, UINT32_MAX, &sound, portMAX_DELAY);
     if (sound != kNone) play(sound);
+    playing = false;
   }
 }
 
@@ -159,11 +161,17 @@ void begin(SemaphoreHandle_t i2cMutex) {
 void setVolume(int percent) { volume = constrain(percent, 0, 100); }
 
 void playChime() {
-  if (task) xTaskNotify(task, kChime, eSetValueWithOverwrite);
+  if (!task) return;
+  playing = true;
+  xTaskNotify(task, kChime, eSetValueWithOverwrite);
 }
 
 void playBlip() {
-  if (task) xTaskNotify(task, kBlip, eSetValueWithOverwrite);
+  if (!task) return;
+  playing = true;
+  xTaskNotify(task, kBlip, eSetValueWithOverwrite);
 }
+
+bool busy() { return playing; }
 
 } // namespace audio

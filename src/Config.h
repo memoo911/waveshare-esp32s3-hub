@@ -75,6 +75,11 @@ constexpr int BATTERY_SHUTDOWN_PERCENT = 3;
 // CPU clock while the screen is off (240 MHz while it's on). WiFi is only on
 // for the periodic refresh, see Net.h setLowPower().
 constexpr uint32_t CPU_MHZ_SCREEN_OFF = 80;
+// On battery with the screen off and WiFi resting, the chip light-sleeps in
+// steps of LIGHT_SLEEP_MS and wakes early on a touch or BOOT. Not on USB, so
+// the serial monitor keeps working while you're developing.
+constexpr bool LIGHT_SLEEP = true;
+constexpr unsigned long LIGHT_SLEEP_MS = 300;
 // Battery level, voltage and power state in the serial log, to measure how
 // long the battery lasts.
 constexpr unsigned long POWER_LOG_MS = 10UL * 60UL * 1000UL;
