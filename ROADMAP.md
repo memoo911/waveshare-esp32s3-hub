@@ -107,7 +107,7 @@ else on the network can flash the board.
 - Optional rain warning: a short sound / notice when rain is expected within
   the next hour
 
-### 10. Battery life (first round done, to measure on hardware)
+### 10. Battery life ✅ (light sleep on battery; fine-tuning optional)
 
 Done:
 - `[Power]` log line every 10 minutes (level, voltage, USB, screen, CPU, WiFi)
@@ -118,13 +118,16 @@ Done:
 Measured (first round, screen off, on battery): about 97 % → 84 % in 38
 minutes, roughly 5 hours from full. Mostly the chip staying awake at 80 MHz.
 
-Second round (to measure):
+Second round (measured: 90 % → 82 % in 70 minutes with a few screen-ons,
+about 7 % per hour, roughly 13-14 hours from full):
 - Light sleep on battery with the screen off and WiFi resting: 300 ms naps,
   woken early by the touch interrupt or BOOT; the timer wake-ups keep the
   clock, chime, refresh schedule, PWR button and pick-up check going. Not on
   USB, so the serial monitor stays connected.
 
-Later:
+Optional fine-tuning:
+- Longer naps (500 ms) and shorter awake windows, about 4-5 % per hour;
+  pick-up reacts up to half a second later
 - Fewer animation frames when nothing moves
 - Check which on-board parts (codec, touch, display rails) can be powered down
 - Power info page: battery voltage, charging state, estimated time left
