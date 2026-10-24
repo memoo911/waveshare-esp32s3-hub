@@ -100,6 +100,9 @@ unsigned long wakeReleaseMs = 0;
 int batteryPercent = -1;
 bool batteryCharging = false;
 bool chargePaused = false;
+// Spirit level: smoothed gravity in screen axes (g).
+float gravX = 0, gravY = 0, gravZ = 1; // smoothed, screen axes, in g
+bool gravInit = false;
 bool usbPowered = true; // until the first battery reading
 // After a wake-up by touch or BOOT, stay awake briefly so the touch task and
 // button polling see what happened.
@@ -234,6 +237,7 @@ void setScreenOn(bool on) {
 void openPage(Page p) {
   if (p == page) return;
   if (p == Page::Settings && page == Page::Home) settingsScroll = 0;
+  if (p == Page::Level) gravInit = false; // no smoothing from an old reading
   // Pages that need the network task to do something while they're open.
   if (page == Page::WifiSetup) net::setSetupWanted(false);
   if (page == Page::Location) net::setWebWanted(false);
@@ -325,8 +329,6 @@ void timerAction(ui::TimerAction a, int preset) {
 // ---------------------------------------------------------------------------
 // Spirit level
 // ---------------------------------------------------------------------------
-float gravX = 0, gravY = 0, gravZ = 1; // smoothed, screen axes, in g
-bool gravInit = false;
 bool levelEdge = false;
 // Zero offsets (degrees), saved in NVS: flat x/y, edge horizontal/vertical.
 float zeroX = 0, zeroY = 0, zeroH = 0, zeroV = 0;

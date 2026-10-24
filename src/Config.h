@@ -60,7 +60,9 @@ constexpr int VOLUME_DEFAULT_PERCENT = 60;
 // Spirit level: how the accelerometer axes map to the screen (x to the right,
 // y down). If the bubble moves the wrong way, flip or swap here; the serial
 // log prints the raw values once a second while the level is open.
-constexpr bool LEVEL_SWAP_XY = false;
+// On the V2 board the sensor's X axis runs along the screen's height and its
+// Y axis along the width (checked on hardware), hence the swap.
+constexpr bool LEVEL_SWAP_XY = true;
 constexpr bool LEVEL_FLIP_X = false;
 constexpr bool LEVEL_FLIP_Y = false;
 
