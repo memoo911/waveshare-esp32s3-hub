@@ -61,9 +61,10 @@ constexpr int VOLUME_DEFAULT_PERCENT = 60;
 // y down). If the bubble moves the wrong way, flip or swap here; the serial
 // log prints the raw values once a second while the level is open.
 // On the V2 board the sensor's X axis runs along the screen's height and its
-// Y axis along the width (checked on hardware), hence the swap.
+// Y axis along the width, reversed (both checked on hardware), hence the
+// swap and the flip.
 constexpr bool LEVEL_SWAP_XY = true;
-constexpr bool LEVEL_FLIP_X = false;
+constexpr bool LEVEL_FLIP_X = true;
 constexpr bool LEVEL_FLIP_Y = false;
 
 // Kitchen timer: how long the alarm beeps (once a second) when time is up.
