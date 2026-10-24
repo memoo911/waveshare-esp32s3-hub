@@ -81,7 +81,7 @@ The speaker works (ES8311 codec). No sounds on touch.
 
 ## Next (planned order)
 
-### 7. Apps ✅ app switcher, kitchen timer (verified), spirit level (to verify)
+### 7. Apps ✅ app switcher, kitchen timer, spirit level (verified on hardware)
 
 Settings → **Apps** chooses the app on the home screen next to Settings:
 Weather (default), **Kitchen timer** or **Spirit level**.
@@ -94,8 +94,10 @@ Weather (default), **Kitchen timer** or **Spirit level**.
 - **Spirit level**: round bubble level when flat (X/Y and total tilt), tube
   level when standing on the bottom or side edge, green "Level" within 0.5°,
   "Set zero" per mode (saved), ~40 fps while open, screen stays on. Axis
-  mapping in `Config.h` (`LEVEL_SWAP_XY`, `LEVEL_FLIP_X`, `LEVEL_FLIP_Y`) to
-  be confirmed on the board.
+  mapping for the V2 board confirmed on hardware (`LEVEL_SWAP_XY` and
+  `LEVEL_FLIP_X` on). Each board reads a couple of degrees off flat, which
+  "Set zero" removes. Possible later: two-step zero (tap, turn 180°, tap) that
+  also works on a surface that isn't level.
 
 Next:
 - **Avatar** (not connected to anything yet): an animated character with
