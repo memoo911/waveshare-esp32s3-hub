@@ -57,6 +57,13 @@ constexpr int VOLUME_DEFAULT_PERCENT = 60;
 // The hourly chime (off by default) stays silent at night
 // (NIGHT_START_HOUR..NIGHT_END_HOUR).
 
+// Spirit level: how the accelerometer axes map to the screen (x to the right,
+// y down). If the bubble moves the wrong way, flip or swap here; the serial
+// log prints the raw values once a second while the level is open.
+constexpr bool LEVEL_SWAP_XY = false;
+constexpr bool LEVEL_FLIP_X = false;
+constexpr bool LEVEL_FLIP_Y = false;
+
 // Kitchen timer: how long the alarm beeps (once a second) when time is up.
 constexpr unsigned long TIMER_RING_MS = 10UL * 1000UL;
 

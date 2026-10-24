@@ -29,6 +29,7 @@
 #include <esp_heap_caps.h>
 #include <esp_sleep.h>
 #include <time.h>
+#include <utility>
 
 #include "Audio.h"
 #include "Config.h"
@@ -241,7 +242,8 @@ void openPage(Page p) {
   if (p == Page::Location) net::setWebWanted(true);
   static const char *names[] = {"home",       "weather", "forecast",   "settings",
                                 "brightness", "wifi",    "wifi setup", "location",
-                                "sound",      "turn off", "apps",       "timer"};
+                                "sound",      "turn off", "apps",       "timer",
+                                "level"};
   Serial.printf("[UI] page %s\n", names[static_cast<int>(p)]);
 }
 
@@ -318,6 +320,87 @@ void timerAction(ui::TimerAction a, int preset) {
     break;
   case TimerAction::None: break;
   }
+}
+
+// ---------------------------------------------------------------------------
+// Spirit level
+// ---------------------------------------------------------------------------
+float gravX = 0, gravY = 0, gravZ = 1; // smoothed, screen axes, in g
+bool gravInit = false;
+bool levelEdge = false;
+// Zero offsets (degrees), saved in NVS: flat x/y, edge horizontal/vertical.
+float zeroX = 0, zeroY = 0, zeroH = 0, zeroV = 0;
+// Last raw (uncalibrated) reading, used by "Set zero".
+LevelInfo levelRaw;
+
+constexpr float kRadToDeg = 57.29578f;
+
+void readLevel(LevelInfo &out) {
+  out = LevelInfo();
+  out.sensor = imu.ready();
+  out.calibrated = zeroX != 0 || zeroY != 0 || zeroH != 0 || zeroV != 0;
+  if (!out.sensor) return;
+  float ax, ay, az;
+  bool ok;
+  {
+    I2cLock lock;
+    ok = imu.accel(ax, ay, az);
+  }
+  if (!ok) return;
+  if (LEVEL_SWAP_XY) std::swap(ax, ay);
+  if (LEVEL_FLIP_X) ax = -ax;
+  if (LEVEL_FLIP_Y) ay = -ay;
+  // Light smoothing: steady bubble, still quick to follow.
+  const float k = gravInit ? 0.3f : 1.0f;
+  gravX += (ax - gravX) * k;
+  gravY += (ay - gravY) * k;
+  gravZ += (az - gravZ) * k;
+  gravInit = true;
+  const float n = sqrtf(gravX * gravX + gravY * gravY + gravZ * gravZ);
+  if (n < 0.2f) return;
+  const float gx = gravX / n, gy = gravY / n, gz = gravZ / n;
+  // Flat or on an edge, with some hysteresis so it doesn't flip back and forth.
+  if (levelEdge && fabsf(gz) > 0.75f) levelEdge = false;
+  else if (!levelEdge && fabsf(gz) < 0.6f) levelEdge = true;
+  out.edge = levelEdge;
+  if (!levelEdge) {
+    out.x = asinf(gx) * kRadToDeg;
+    out.y = asinf(gy) * kRadToDeg;
+  } else {
+    out.vertical = fabsf(gx) > fabsf(gy);
+    out.angle = out.vertical ? atan2f(gy * (gx >= 0 ? 1 : -1), fabsf(gx)) * kRadToDeg
+                             : atan2f(gx * (gy >= 0 ? 1 : -1), fabsf(gy)) * kRadToDeg;
+  }
+  levelRaw = out;
+  out.x -= zeroX;
+  out.y -= zeroY;
+  out.angle -= out.vertical ? zeroV : zeroH;
+
+  static unsigned long lastLogMs = 0;
+  if (millis() - lastLogMs > 1000) {
+    lastLogMs = millis();
+    Serial.printf("[Level] raw %.2f %.2f %.2f -> %s x=%.1f y=%.1f angle=%.1f\n", ax, ay, az,
+                  out.edge ? (out.vertical ? "edge-v" : "edge-h") : "flat", out.x, out.y,
+                  out.angle);
+  }
+}
+
+// The current position counts as level from now on.
+void setLevelZero() {
+  if (!levelRaw.edge) {
+    zeroX = levelRaw.x;
+    zeroY = levelRaw.y;
+    prefs.putFloat("lvx", zeroX);
+    prefs.putFloat("lvy", zeroY);
+  } else if (levelRaw.vertical) {
+    zeroV = levelRaw.angle;
+    prefs.putFloat("lvv", zeroV);
+  } else {
+    zeroH = levelRaw.angle;
+    prefs.putFloat("lvh", zeroH);
+  }
+  Serial.printf("[Level] zero set (%s)\n",
+                levelRaw.edge ? (levelRaw.vertical ? "edge-v" : "edge-h") : "flat");
 }
 
 // Countdown and alarm; runs every loop pass, also while the screen is off.
@@ -414,7 +497,8 @@ void sleepIfIdle() {
   // Stays on: no timeout, a QR code being scanned, or the timer counting
   // down on screen.
   const bool timerShown = page == Page::Timer && timerState != TimerState::Idle;
-  if (minutes == 0 || page == Page::WifiSetup || page == Page::Location || timerShown) {
+  if (minutes == 0 || page == Page::WifiSetup || page == Page::Location || timerShown ||
+      page == Page::Level) {
     lastActivityMs = millis();
     return;
   }
@@ -707,6 +791,10 @@ void handleTouch(const UiState &st) {
         timerAction(ta, preset);
         break;
       }
+      if (ui::tapsZero(st, g.x, g.y)) {
+        setLevelZero();
+        break;
+      }
       const int app = ui::appAt(st, g.x, g.y);
       if (app >= 0) {
         setHomeApp(app);
@@ -894,6 +982,10 @@ void setup() {
   chimeOn = prefs.getBool("chime", false);
   homeApp = static_cast<HomeApp>(prefs.getUChar("app", 0) % kHomeAppCount);
   timerMinutes = constrain(prefs.getUChar("tmin", 8), 1, ui::kTimerMaxMinutes);
+  zeroX = prefs.getFloat("lvx", 0);
+  zeroY = prefs.getFloat("lvy", 0);
+  zeroH = prefs.getFloat("lvh", 0);
+  zeroV = prefs.getFloat("lvv", 0);
   nightDim = prefs.getBool("nightdim", true);
   screenOffIndex = prefs.getUChar("scroff", SCREEN_TIMEOUT_DEFAULT) % ui::kScreenOffChoices;
   language = static_cast<Lang>(prefs.getUChar("lang", static_cast<uint8_t>(DEFAULT_LANGUAGE)));
@@ -954,7 +1046,9 @@ void loop() {
 
   const unsigned long now = millis();
   // Faster frames while the settings list is being scrolled.
-  const bool scrolling = page == Page::Settings && settingsScroll != shownScroll;
+  // (and on the spirit level, so the bubble moves smoothly).
+  const bool scrolling =
+      (page == Page::Settings && settingsScroll != shownScroll) || page == Page::Level;
   if (now - lastFrameMs < (scrolling ? 25UL : 1000UL / ANIMATION_FPS)) {
     delay(screenOn ? 2 : 20);
     return;
@@ -977,6 +1071,7 @@ void loop() {
   st.timer.minutes = timerMinutes;
   st.timer.remainingSec = timerRemainingSec();
   st.timer.totalSec = timerTotalSec;
+  if (page == Page::Level) readLevel(st.level);
   followSetup(st);
 
   const unsigned long drawStart = millis();

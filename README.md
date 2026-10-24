@@ -29,8 +29,9 @@ PlatformIO · CST820 touch · AXP2101 · QMI8658 · ES8311*
 - **Settings**: WiFi and location from your phone via QR code, brightness
   and volume sliders, screen-off time, night dimming, hourly chime, language,
   turn off
-- **Kitchen timer** app: pick the minutes, big countdown, beeps when time is
-  up (choose it in **Settings → Apps**)
+- **Apps** for the home screen (**Settings → Apps**): **Kitchen timer** (big
+  countdown, beeps when time is up) and **Spirit level** (bubble level using
+  the motion sensor)
 - **Sound**: optional hourly chime (off by default, silent at night)
 - **Languages**: English (default) and Croatian (Hrvatski) for now, on the
   board and on the phone pages
@@ -132,7 +133,7 @@ The list scrolls: drag it up to see the rows at the bottom.
 | **Location** | Place for the forecast, chosen on your phone |
 | **Display** | Brightness, when the screen turns off, night dimming |
 | **Sound** | Volume, hourly chime |
-| **Apps** | Choose the app on the home screen: Weather or Kitchen timer |
+| **Apps** | Choose the app on the home screen: Weather, Kitchen timer or Spirit level |
 | **Language** | English / Croatian, tap to switch |
 | **Turn off** | Switch the board off (press **PWR** to turn it on) |
 
@@ -240,12 +241,12 @@ also when it's on USB. **Cancel** (or swiping right) goes back. Press **PWR**
 once to turn it on again; all settings are kept. Holding **PWR** for 6
 seconds also turns it off.
 
-### Apps and the kitchen timer
+### Apps
 
 ![Apps and kitchen timer](docs/timer.png)
 
 **Settings → Apps** chooses the app that sits on the home screen next to
-Settings: **Weather** (default) or **Kitchen timer**. Tap one; the green dot
+Settings: **Weather** (default), **Kitchen timer** or **Spirit level**. Tap one; the green dot
 shows the chosen app. To get the weather back, choose Weather again. More
 apps will follow.
 
@@ -262,15 +263,33 @@ apps will follow.
 The countdown keeps running when you go to other pages or the screen turns
 off. While the countdown is on screen, the screen stays on.
 
+**Spirit level** (tap its tile on the home screen):
+
+![Spirit level](docs/level.png)
+
+- **Lying flat**: a round level. The bubble floats to the higher side; the
+  readout shows the total tilt and the tilt left/right (**X**) and
+  forward/back (**Y**). Within 0.5° the bubble turns green and it says
+  **Level**.
+- **Standing on an edge**: it switches to a tube level along the bottom (or
+  up the side when it stands on its side edge) with the angle below.
+- **Set zero**: put the board on a surface you know is level and tap it; that
+  position counts as 0° from then on (remembered). Each mode (flat, bottom
+  edge, side edge) has its own zero.
+- The screen stays on while the level is open.
+
+If the bubble moves the wrong way, flip or swap the axes with
+`LEVEL_FLIP_X`, `LEVEL_FLIP_Y` and `LEVEL_SWAP_XY` in `src/Config.h`.
+
 ## Everyday use
 
 | Action | What it does |
 |---|---|
-| Tap a tile on the home screen | Opens Weather (or the Kitchen timer) or Settings |
+| Tap a tile on the home screen | Opens the chosen app (Weather, Kitchen timer or Spirit level) or Settings |
 | Swipe **left** on the weather screen | 3-day forecast |
 | Swipe **right**, or tap **‹** at the top left | Back |
 | **Settings → Display** | Drag the brightness slider; tap **Screen off after** to choose when the screen turns off; tap **Night dimming** to switch the dimmer night screen (22:00 to 07:00) on or off |
-| **Settings → Apps** | Weather or Kitchen timer on the home screen |
+| **Settings → Apps** | Weather, Kitchen timer or Spirit level on the home screen |
 | **Settings → Sound** | Drag the volume slider (a short note plays when you let go); tap below it to switch the hourly chime on or off |
 | **BOOT** button | Refresh the weather now ("Refreshing…" shows at the top); wakes the screen when it's off; stops the timer alarm |
 | Touch the dark screen, or pick the board up | Wakes it |

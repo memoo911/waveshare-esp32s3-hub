@@ -81,20 +81,28 @@ The speaker works (ES8311 codec). No sounds on touch.
 
 ## Next (planned order)
 
-### 7. Apps ✅ app switcher and kitchen timer (verified on hardware) · spirit level next
+### 7. Apps ✅ app switcher, kitchen timer (verified), spirit level (to verify)
 
 Settings → **Apps** chooses the app on the home screen next to Settings:
-Weather (default) or **Kitchen timer**. Timer: − / + and 3/5/8/10 min
-presets (last time remembered), countdown ring, pause/resume/reset; at 0:00
-the screen wakes and it beeps once a second for 10 seconds (at least half
-volume, also at night), tap or BOOT stops it. Keeps counting on other pages
-and with the screen off; the screen stays on while the countdown is shown.
+Weather (default), **Kitchen timer** or **Spirit level**.
+
+- **Kitchen timer**: − / + and 3/5/8/10 min presets (last time remembered),
+  countdown ring, pause/resume/reset; at 0:00 the screen wakes and it beeps
+  once a second for 10 seconds (at least half volume, also at night), tap or
+  BOOT stops it. Keeps counting on other pages and with the screen off; the
+  screen stays on while the countdown is shown.
+- **Spirit level**: round bubble level when flat (X/Y and total tilt), tube
+  level when standing on the bottom or side edge, green "Level" within 0.5°,
+  "Set zero" per mode (saved), ~40 fps while open, screen stays on. Axis
+  mapping in `Config.h` (`LEVEL_SWAP_XY`, `LEVEL_FLIP_X`, `LEVEL_FLIP_Y`) to
+  be confirmed on the board.
 
 Next:
-- **Spirit level**: bubble level from the accelerometer (flat on a table) and
-  a bar level when standing on an edge, angles in degrees, "zero" button to
-  calibrate, screen stays on while open
-- Later: alarm clock, calculator, music player (SD card), AI agent / avatar
+- **Avatar** (not connected to anything yet): an animated character with
+  moods and activities: resting, listening, looking around, walking across
+  the screen, running, cycling. Later it becomes the face of an AI assistant
+  (voice in, answers on screen).
+- Later: alarm clock, calculator, music player (SD card)
 
 ### 8. Updates over WiFi (OTA)
 

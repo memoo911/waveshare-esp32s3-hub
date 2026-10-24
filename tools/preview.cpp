@@ -124,6 +124,16 @@ int main(int argc, char **argv) {
       {"timer_paused", Page::Timer, 3, true, 12.6f, 0.3f, 17},
       {"timer_ringing", Page::Timer, 3, true, 12.6f, 0.3f, 17},
       {"apps_en", Page::Apps, 3, true, 12.6f, 0.3f, 17, Lang::En},
+      {"home_level", Page::Home, 3, true, 12.6f, 0.3f, 17},
+      {"level_tilt", Page::Level, 3, true, 12.6f, 0.3f, 17},
+      {"level_ok", Page::Level, 3, true, 12.6f, 0.3f, 17},
+      {"level_edge", Page::Level, 3, true, 12.6f, 0.3f, 17},
+      {"level_edge_ok", Page::Level, 3, true, 12.6f, 0.3f, 17},
+      {"level_vertical", Page::Level, 3, true, 12.6f, 0.3f, 17},
+      {"home_level_en", Page::Home, 3, true, 12.6f, 0.3f, 17, Lang::En},
+      {"level_tilt_en", Page::Level, 3, true, 12.6f, 0.3f, 17, Lang::En},
+      {"level_ok_en", Page::Level, 3, true, 12.6f, 0.3f, 17, Lang::En},
+      {"level_edge_en", Page::Level, 3, true, 12.6f, 0.3f, 17, Lang::En},
       {"home_timer_en", Page::Home, 3, true, 12.6f, 0.3f, 17, Lang::En},
       {"timer_idle_en", Page::Timer, 3, true, 12.6f, 0.3f, 17, Lang::En},
       {"timer_running_en", Page::Timer, 3, true, 12.6f, 0.3f, 17, Lang::En},
@@ -155,6 +165,15 @@ int main(int argc, char **argv) {
       st.timer.remainingSec = 7 * 60 + 42;
     }
     if (name.rfind("timer_ringing", 0) == 0) st.timer.state = TimerState::Ringing;
+    if (name.rfind("home_level", 0) == 0) st.app = HomeApp::Level;
+    if (name.rfind("apps", 0) == 0) st.app = HomeApp::Level;
+    if (name.rfind("level_tilt", 0) == 0) { st.level.x = 3.4f; st.level.y = -2.1f; }
+    if (name.rfind("level_ok", 0) == 0) { st.level.x = 0.2f; st.level.y = -0.1f; st.level.calibrated = true; }
+    if (name.rfind("level_edge", 0) == 0) {
+      st.level.edge = true;
+      st.level.angle = name.rfind("level_edge_ok", 0) == 0 ? 0.3f : -4.6f;
+    }
+    if (name == "level_vertical") { st.level.edge = true; st.level.vertical = true; st.level.angle = 2.8f; }
     if (name == "wifi_en") {
       snprintf(st.info.nets[0].ssid, 33, "My phone hotspot");
       snprintf(st.info.nets[1].ssid, 33, "Network");

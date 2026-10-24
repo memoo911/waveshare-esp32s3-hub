@@ -82,6 +82,11 @@ enum class Str : uint8_t {
   Stop,
   TimesUp,
   AppsHint,
+  LevelTile,
+  SpiritLevel,
+  SetZero,
+  LevelOk,
+  NoSensor,
   Count
 };
 
@@ -163,6 +168,11 @@ inline const char *tr(Lang lang, Str id) {
       "Stop",
       "Time's up!",
       "The chosen app is on the home screen",
+      "Level",
+      "Spirit level",
+      "Set zero",
+      "Level",
+      "Motion sensor not found",
   };
   static const char *const kHr[] = {
       "Osjeća se %s",
@@ -239,6 +249,11 @@ inline const char *tr(Lang lang, Str id) {
       "Stop",
       "Gotovo!",
       "Odabrana aplikacija je na početnom ekranu",
+      "Libela",
+      "Libela",
+      "Nula",
+      "Ravno",
+      "Senzor pokreta nije pronađen",
   };
   static_assert(sizeof(kEn) / sizeof(kEn[0]) == static_cast<int>(Str::Count), "kEn");
   static_assert(sizeof(kHr) / sizeof(kHr[0]) == static_cast<int>(Str::Count), "kHr");

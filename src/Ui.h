@@ -24,13 +24,24 @@ enum class Page : uint8_t {
   Sound,
   PowerOff,
   Apps,
-  Timer
+  Timer,
+  Level
 };
-constexpr int kPageCount = 12;
+constexpr int kPageCount = 13;
 
 // The app shown on the home screen next to Settings (Settings -> Apps).
-enum class HomeApp : uint8_t { Weather = 0, Timer = 1 };
-constexpr int kHomeAppCount = 2;
+enum class HomeApp : uint8_t { Weather = 0, Timer = 1, Level = 2 };
+constexpr int kHomeAppCount = 3;
+
+// Spirit level reading (degrees, after calibration).
+struct LevelInfo {
+  bool sensor = true;   // accelerometer found
+  bool edge = false;    // standing on an edge (bar level) instead of lying flat
+  bool vertical = false; // edge mode, standing on a side edge (tube runs up/down)
+  float x = 0, y = 0;   // flat: tilt left/right and forward/back
+  float angle = 0;      // edge: tilt along the tube
+  bool calibrated = false;
+};
 
 // Kitchen timer.
 enum class TimerState : uint8_t { Idle, Running, Paused, Ringing };
@@ -76,6 +87,7 @@ struct UiState {
   Page page = Page::Home;
   HomeApp app = HomeApp::Weather;
   TimerInfo timer;
+  LevelInfo level;
   int scroll = 0; // Settings list, pixels scrolled down
   ScreenState screen;
   DeviceInfo info;
@@ -181,6 +193,31 @@ inline void drawWeatherTile(Canvas &c, const UiState &st) {
          kText, Align::Center);
 }
 
+inline const char *appName(Lang L, HomeApp a) {
+  switch (a) {
+  case HomeApp::Timer: return i18n::tr(L, Str::KitchenTimer);
+  case HomeApp::Level: return i18n::tr(L, Str::SpiritLevel);
+  default: return i18n::tr(L, Str::Weather);
+  }
+}
+
+constexpr Rgb kLevelGlass = rgb(0x0F2A2A);
+constexpr Rgb kBubble = rgb(0xE6F7F1);
+
+inline void drawLevelTile(Canvas &c, const UiState &st) {
+  const Rect &wt = kWeatherTile;
+  c.roundRectGradient(wt.x, wt.y, wt.w, wt.h, kTileRadius, rgb(0x163A36), rgb(0x0C1C1B));
+  const float cx = wt.x + wt.w / 2.0f, cy = wt.y + 66;
+  c.fillCircle(cx, cy, 38, kLevelGlass);
+  c.ring(cx, cy, 38, 3, kAccent);
+  c.ring(cx, cy, 14, 1.5f, kAccent, 0.5f);
+  c.glow(cx, cy, 20, kAccent, 0.35f);
+  c.fillCircle(cx, cy, 11, kBubble);
+  c.fillCircle(cx - 3.5f, cy - 3.5f, 3.5f, rgb(0xFFFFFF));
+  c.text(kFontBody, wt.x + wt.w / 2, kTileLabelBaseline, i18n::tr(st.screen.lang, Str::LevelTile),
+         kText, Align::Center);
+}
+
 inline void drawHomeStatic(Canvas &c, const UiState &st) {
   const ScreenState &s = st.screen;
   c.clear(kBackground);
@@ -188,6 +225,7 @@ inline void drawHomeStatic(Canvas &c, const UiState &st) {
   screen::drawClock(c, s);
 
   if (st.app == HomeApp::Timer) drawTimerTile(c, st);
+  else if (st.app == HomeApp::Level) drawLevelTile(c, st);
   else drawWeatherTile(c, st);
 
   // Settings tile.
@@ -305,8 +343,7 @@ inline void drawSettingsList(Canvas &c, const UiState &st) {
   snprintf(buf, sizeof(buf), "%d %%", d.volumePercent);
   drawRow(c, kSoundRow, i18n::tr(L, Str::Sound), buf, true);
   // Not there yet: apps for the home screen.
-  drawRow(c, kAppsRow, i18n::tr(L, Str::Apps),
-          i18n::tr(L, st.app == HomeApp::Timer ? Str::KitchenTimer : Str::Weather), true);
+  drawRow(c, kAppsRow, i18n::tr(L, Str::Apps), appName(L, st.app), true);
   drawRow(c, kLanguageRow, i18n::tr(L, Str::Language), i18n::tr(L, Str::LanguageName), false);
   drawRow(c, kTurnOffRow, i18n::tr(L, Str::TurnOff), "", true, kDanger);
 
@@ -658,9 +695,6 @@ inline void drawPowerOffStatic(Canvas &c, const UiState &st) {
 // ---------------------------------------------------------------------------
 inline Rect appRowRect(int i) { return Rect{14, 84 + i * 72, 340, 62}; }
 
-inline const char *appName(Lang L, HomeApp a) {
-  return i18n::tr(L, a == HomeApp::Timer ? Str::KitchenTimer : Str::Weather);
-}
 
 inline void drawAppsStatic(Canvas &c, const UiState &st) {
   const Lang L = st.screen.lang;
@@ -818,6 +852,149 @@ inline TimerAction timerActionAt(const UiState &st, int x, int y, int &preset) {
 }
 
 // ---------------------------------------------------------------------------
+// Spirit level
+// ---------------------------------------------------------------------------
+// Flat: round "bull's eye" level. Edge: tube level along the bottom (or side).
+constexpr float kLevelCx = 184, kLevelCy = 214, kLevelR = 128;
+constexpr float kBubbleR = 26;
+constexpr float kLevelFullScaleDeg = 12;   // bubble reaches the rim at this tilt
+constexpr float kLevelOkDeg = 0.5f;       // counts as level
+constexpr Rect kLevelDialRect{40, 70, 288, 290};
+constexpr Rect kLevelReadoutRect{0, 352, W, 40};
+constexpr Rect kZeroButton{94, 396, 180, 46};
+// Tube (edge mode).
+constexpr Rect kTubeH{34, 178, 300, 72};
+constexpr Rect kTubeV{148, 76, 72, 276};
+constexpr float kTubeTravel = 104;        // bubble travel from the centre
+constexpr float kTubeBubbleLen = 66, kTubeBubbleThick = 40;
+
+inline bool levelOk(const LevelInfo &l) {
+  return l.edge ? fabsf(l.angle) < kLevelOkDeg
+                : fabsf(l.x) < kLevelOkDeg && fabsf(l.y) < kLevelOkDeg;
+}
+
+inline void formatDeg(char *out, size_t n, float deg) {
+  float v = roundf(fabsf(deg) * 10) / 10;
+  snprintf(out, n, "%.1f°", v);
+}
+
+inline void drawLevelStatic(Canvas &c, const UiState &st) {
+  const Lang L = st.screen.lang;
+  const LevelInfo &l = st.level;
+  c.clear(kBackground);
+  drawTitleBar(c, st.screen, i18n::tr(L, Str::LevelTile));
+  if (!l.sensor) {
+    c.text(kFontBody, W / 2, 230, i18n::tr(L, Str::NoSensor), kMuted, Align::Center);
+    return;
+  }
+  if (!l.edge) {
+    // Glass dial with rings at 2°, 5° and 10° and a faint crosshair.
+    c.glow(kLevelCx, kLevelCy, kLevelR + 24, kAccent, 0.10f);
+    c.fillCircle(kLevelCx, kLevelCy, kLevelR, kLevelGlass);
+    const float degs[] = {2, 5, 10};
+    for (float d : degs) {
+      const float r = kLevelR * d / kLevelFullScaleDeg;
+      c.ring(kLevelCx, kLevelCy, r, 1.2f, rgb(0x2E5A55));
+      if (d >= 5) {
+        char lbl[8];
+        snprintf(lbl, sizeof(lbl), "%d°", static_cast<int>(d));
+        c.text(kFontSmall, static_cast<int>(kLevelCx + r * 0.7071f) + 4,
+               static_cast<int>(kLevelCy - r * 0.7071f) - 2, lbl, rgb(0x4F8A82));
+      }
+    }
+    c.capsule(kLevelCx - kLevelR + 10, kLevelCy, kLevelCx + kLevelR - 10, kLevelCy, 0.7f,
+              rgb(0x24433F));
+    c.capsule(kLevelCx, kLevelCy - kLevelR + 10, kLevelCx, kLevelCy + kLevelR - 10, 0.7f,
+              rgb(0x24433F));
+    c.ring(kLevelCx, kLevelCy, kLevelR, 3, rgb(0x2E5A55));
+  } else {
+    const Rect &t = l.vertical ? kTubeV : kTubeH;
+    c.roundRect(t.x, t.y, t.w, t.h, (l.vertical ? t.w : t.h) / 2.0f, kLevelGlass);
+    // Glass highlight along the tube.
+    if (l.vertical) {
+      c.capsule(t.x + 13, t.y + 44, t.x + 13, t.y + 110, 2, rgb(0xFFFFFF), 0.07f);
+    } else {
+      c.capsule(t.x + 44, t.y + 13, t.x + 110, t.y + 13, 2, rgb(0xFFFFFF), 0.07f);
+    }
+    // Marks either side of the centre: the bubble fits between them when level.
+    const float cx = t.x + t.w / 2.0f, cy = t.y + t.h / 2.0f;
+    const float gap = kTubeBubbleLen / 2 + 8;
+    if (l.vertical) {
+      c.capsule(t.x + 12, cy - gap, t.x + t.w - 12, cy - gap, 1.2f, rgb(0x2E5A55));
+      c.capsule(t.x + 12, cy + gap, t.x + t.w - 12, cy + gap, 1.2f, rgb(0x2E5A55));
+    } else {
+      c.capsule(cx - gap, t.y + 12, cx - gap, t.y + t.h - 12, 1.2f, rgb(0x2E5A55));
+      c.capsule(cx + gap, t.y + 12, cx + gap, t.y + t.h - 12, 1.2f, rgb(0x2E5A55));
+    }
+  }
+  pill(c, kZeroButton, rgb(0x14171D));
+  pillLabel(c, kZeroButton, kFontBody, i18n::tr(L, Str::SetZero),
+            l.calibrated ? kAccent : kText);
+}
+
+inline void drawBubble(Canvas &c, float x, float y, bool ok) {
+  const Rgb col = ok ? kAccent : kBubble;
+  c.glow(x, y, kBubbleR + 14, col, ok ? 0.45f : 0.25f);
+  c.fillCircle(x, y, kBubbleR, col, 0.92f);
+  c.ring(x, y, kBubbleR, 2, rgb(0xFFFFFF), 0.5f);
+  c.fillCircle(x - kBubbleR * 0.35f, y - kBubbleR * 0.35f, kBubbleR * 0.28f, rgb(0xFFFFFF), 0.85f);
+}
+
+// Elongated bubble, as in a real tube level.
+inline void drawTubeBubble(Canvas &c, float x, float y, bool vertical, bool ok) {
+  const Rgb col = ok ? kAccent : kBubble;
+  const float h = (kTubeBubbleLen - kTubeBubbleThick) / 2, r = kTubeBubbleThick / 2;
+  const float x0 = vertical ? x : x - h, x1 = vertical ? x : x + h;
+  const float y0 = vertical ? y - h : y, y1 = vertical ? y + h : y;
+  c.glow(x, y, kTubeBubbleLen / 2 + 14, col, ok ? 0.40f : 0.22f);
+  c.capsule(x0, y0, x1, y1, r, col, 0.92f);
+  if (vertical) c.capsule(x - r * 0.4f, y0, x - r * 0.4f, y1 - h * 0.6f, r * 0.2f, rgb(0xFFFFFF), 0.8f);
+  else c.capsule(x0, y - r * 0.4f, x1 - h * 0.6f, y - r * 0.4f, r * 0.2f, rgb(0xFFFFFF), 0.8f);
+}
+
+inline void drawLevelDynamic(Canvas &c, const UiState &st) {
+  const Lang L = st.screen.lang;
+  const LevelInfo &l = st.level;
+  if (!l.sensor) return;
+  const bool ok = levelOk(l);
+  char buf[32];
+  if (!l.edge) {
+    // The bubble floats to the high side: opposite to the tilt.
+    float dx = -l.x / kLevelFullScaleDeg, dy = -l.y / kLevelFullScaleDeg;
+    const float len = sqrtf(dx * dx + dy * dy);
+    const float maxLen = (kLevelR - kBubbleR - 4) / kLevelR;
+    if (len > maxLen) { dx *= maxLen / len; dy *= maxLen / len; }
+    if (ok) c.ring(kLevelCx, kLevelCy, kBubbleR + 6, 3, kAccent);
+    drawBubble(c, kLevelCx + dx * kLevelR, kLevelCy + dy * kLevelR, ok);
+    const float total = sqrtf(l.x * l.x + l.y * l.y);
+    if (ok) snprintf(buf, sizeof(buf), "%s", i18n::tr(L, Str::LevelOk));
+    else formatDeg(buf, sizeof(buf), total);
+    c.text(kFontTitle, W / 2, 382, buf, ok ? kAccent : kText, Align::Center);
+    char xs[16], ys[16];
+    formatDeg(xs, sizeof(xs), l.x);
+    formatDeg(ys, sizeof(ys), l.y);
+    snprintf(buf, sizeof(buf), "X %s", xs);
+    c.text(kFontSmall, 24, 382, buf, kMuted);
+    snprintf(buf, sizeof(buf), "Y %s", ys);
+    c.text(kFontSmall, W - 24, 382, buf, kMuted, Align::Right);
+  } else {
+    const Rect &t = l.vertical ? kTubeV : kTubeH;
+    const float cx = t.x + t.w / 2.0f, cy = t.y + t.h / 2.0f;
+    float off = -l.angle / kLevelFullScaleDeg * kTubeTravel;
+    off = fmaxf(-kTubeTravel, fminf(kTubeTravel, off));
+    if (l.vertical) drawTubeBubble(c, cx, cy + off, true, ok);
+    else drawTubeBubble(c, cx + off, cy, false, ok);
+    if (ok) snprintf(buf, sizeof(buf), "%s", i18n::tr(L, Str::LevelOk));
+    else formatDeg(buf, sizeof(buf), l.angle);
+    c.text(kFontTitle, W / 2, 382, buf, ok ? kAccent : kText, Align::Center);
+  }
+}
+
+inline bool tapsZero(const UiState &st, int x, int y) {
+  return st.page == Page::Level && st.level.sensor && inside(kZeroButton, x, y, 10);
+}
+
+// ---------------------------------------------------------------------------
 // Page dispatch
 // ---------------------------------------------------------------------------
 inline void drawStatic(Canvas &c, const UiState &st) {
@@ -834,6 +1011,7 @@ inline void drawStatic(Canvas &c, const UiState &st) {
   case Page::PowerOff: drawPowerOffStatic(c, st); break;
   case Page::Apps: drawAppsStatic(c, st); break;
   case Page::Timer: drawTimerStatic(c, st); break;
+  case Page::Level: drawLevelStatic(c, st); break;
   }
 }
 
@@ -867,6 +1045,13 @@ inline int dynamicRects(const Canvas &c, const UiState &st, Rect out[4]) {
       return 1;
     }
     return 0;
+  case Page::Level:
+    if (!st.level.sensor) return 0;
+    out[0] = st.level.edge ? (st.level.vertical ? Rect{120, 66, 128, 290}
+                                                : Rect{0, 150, W, 130})
+                           : kLevelDialRect;
+    out[1] = kLevelReadoutRect;
+    return 2;
   default:
     return 0;
   }
@@ -884,6 +1069,7 @@ inline void drawDynamic(Canvas &c, const UiState &st) {
       drawTimerRing(c, st);
     }
     break;
+  case Page::Level: drawLevelDynamic(c, st); break;
   default: break;
   }
 }
@@ -950,6 +1136,10 @@ inline uint32_t staticKey(const UiState &st) {
   case Page::Timer:
     h.add(t.state); h.add(t.minutes);
     break;
+  case Page::Level:
+    h.add(st.level.sensor); h.add(st.level.edge); h.add(st.level.vertical);
+    h.add(st.level.calibrated);
+    break;
   case Page::Settings:
     h.str(d.ssid); h.str(d.ip); h.add(d.brightnessPercent); h.add(d.volumePercent);
     h.add(st.app);
@@ -990,6 +1180,13 @@ inline uint32_t dynamicKey(const UiState &st, uint32_t frameNo) {
   case Page::Timer:
     h.add(st.timer.state); h.add(st.timer.remainingSec);
     return h.h;
+  case Page::Level: {
+    // Bubble position to the pixel, readout to 0.1°.
+    const LevelInfo &l = st.level;
+    h.add(static_cast<int>(roundf(l.x * 20))); h.add(static_cast<int>(roundf(l.y * 20)));
+    h.add(static_cast<int>(roundf(l.angle * 20)));
+    return h.h;
+  }
   case Page::Home:
   case Page::Weather: {
     h.add(s.second % 2); h.add(s.timeValid);
@@ -1037,7 +1234,9 @@ inline Page onTap(const UiState &st, int x, int y) {
   switch (p) {
   case Page::Home:
     if (inside(kWeatherTile, x, y, kTouchMargin)) {
-      return st.app == HomeApp::Timer ? Page::Timer : Page::Weather;
+      return st.app == HomeApp::Timer ? Page::Timer
+             : st.app == HomeApp::Level ? Page::Level
+                                        : Page::Weather;
     }
     if (inside(kSettingsTile, x, y, kTouchMargin)) return Page::Settings;
     break;
