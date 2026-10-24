@@ -29,6 +29,8 @@ PlatformIO · CST820 touch · AXP2101 · QMI8658 · ES8311*
 - **Settings**: WiFi and location from your phone via QR code, brightness
   and volume sliders, screen-off time, night dimming, hourly chime, language,
   turn off
+- **Kitchen timer** app: pick the minutes, big countdown, beeps when time is
+  up (choose it in **Settings → Apps**)
 - **Sound**: optional hourly chime (off by default, silent at night)
 - **Languages**: English (default) and Croatian (Hrvatski) for now, on the
   board and on the phone pages
@@ -130,7 +132,7 @@ The list scrolls: drag it up to see the rows at the bottom.
 | **Location** | Place for the forecast, chosen on your phone |
 | **Display** | Brightness, when the screen turns off, night dimming |
 | **Sound** | Volume, hourly chime |
-| **Apps** | Reserved for later |
+| **Apps** | Choose the app on the home screen: Weather or Kitchen timer |
 | **Language** | English / Croatian, tap to switch |
 | **Turn off** | Switch the board off (press **PWR** to turn it on) |
 
@@ -238,22 +240,39 @@ also when it's on USB. **Cancel** (or swiping right) goes back. Press **PWR**
 once to turn it on again; all settings are kept. Holding **PWR** for 6
 seconds also turns it off.
 
-### Apps
+### Apps and the kitchen timer
 
-**Settings → Apps** is reserved for later: the idea is to choose one
-app for the home screen (for example a calculator or an AI assistant) instead
-of the weather. It does nothing yet.
+![Apps and kitchen timer](docs/timer.png)
+
+**Settings → Apps** chooses the app that sits on the home screen next to
+Settings: **Weather** (default) or **Kitchen timer**. Tap one; the green dot
+shows the chosen app. To get the weather back, choose Weather again. More
+apps will follow.
+
+**Kitchen timer** (tap its tile on the home screen):
+
+1. Set the time with **−** and **+** (one minute per tap, up to 99) or tap
+   **3 / 5 / 8 / 10 min**. The last time you used is remembered.
+2. Tap **Start**. A ring counts down; the home tile shows the time left.
+3. **Pause** / **Resume**, or **Reset** to cancel.
+4. At **0:00** the screen turns on and the board beeps once a second for
+   **10 seconds**, at least at half volume (even if the volume is at 0 %) and
+   also at night. Tap anywhere, or press **BOOT**, to stop it sooner.
+
+The countdown keeps running when you go to other pages or the screen turns
+off. While the countdown is on screen, the screen stays on.
 
 ## Everyday use
 
 | Action | What it does |
 |---|---|
-| Tap a tile on the home screen | Opens Weather or Settings |
+| Tap a tile on the home screen | Opens Weather (or the Kitchen timer) or Settings |
 | Swipe **left** on the weather screen | 3-day forecast |
 | Swipe **right**, or tap **‹** at the top left | Back |
 | **Settings → Display** | Drag the brightness slider; tap **Screen off after** to choose when the screen turns off; tap **Night dimming** to switch the dimmer night screen (22:00 to 07:00) on or off |
+| **Settings → Apps** | Weather or Kitchen timer on the home screen |
 | **Settings → Sound** | Drag the volume slider (a short note plays when you let go); tap below it to switch the hourly chime on or off |
-| **BOOT** button | Refresh the weather now ("Refreshing…" shows at the top); wakes the screen when it's off |
+| **BOOT** button | Refresh the weather now ("Refreshing…" shows at the top); wakes the screen when it's off; stops the timer alarm |
 | Touch the dark screen, or pick the board up | Wakes it |
 | **PWR**, short press | Screen off / on |
 | Drag up / down in **Settings** | Scroll the list (more rows below: Apps, Language, Turn off) |

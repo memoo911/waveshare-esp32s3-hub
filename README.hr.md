@@ -30,6 +30,8 @@ Sustav je zadano na engleskom; u postavkama se prebacuje na hrvatski (vidi
 - **Postavke**: WiFi i mjesto s mobitela preko QR koda, klizači za svjetlinu i
   glasnoću, vrijeme gašenja ekrana, noćno zatamnjenje, zvono svaki sat, jezik,
   isključivanje
+- Aplikacija **Kuhinjski tajmer**: odabir minuta, veliko odbrojavanje, pištanje
+  kad istekne (bira se u **Postavke → Aplikacije**)
 - **Zvuk**: zvono svaki sat po želji (zadano isključeno, noću tiho)
 - **Jezici**: engleski (zadano) i hrvatski, na satu i na stranicama na mobitelu
 - **Baterija**: postotak i oznaka punjenja; tamniji ekran noću (može se
@@ -130,7 +132,7 @@ Popis se pomiče: povuci ga prema gore da vidiš redove na dnu.
 | **Location (Mjesto)** | Mjesto za prognozu, bira se na mobitelu |
 | **Display (Zaslon)** | Svjetlina, kad se ekran gasi, noćno zatamnjenje |
 | **Sound (Zvuk)** | Glasnoća, zvono svaki sat |
-| **Apps (Aplikacije)** | Rezervirano za kasnije |
+| **Apps (Aplikacije)** | Bira aplikaciju na početnom ekranu: Vrijeme ili Kuhinjski tajmer |
 | **Language (Jezik)** | Engleski / hrvatski, dodir mijenja |
 | **Turn off (Isključi)** | Gasi ploču (pali se tipkom **PWR**) |
 
@@ -234,22 +236,40 @@ je na USB-u. **Odustani** (ili povlačenje udesno) vraća natrag. Ponovno se pal
 jednim pritiskom na **PWR**; sve postavke ostaju. Držanje **PWR** 6 sekundi
 također gasi ploču.
 
-### Aplikacije
+### Aplikacije i kuhinjski tajmer
 
-**Postavke → Aplikacije** je rezervirano za kasnije: ideja je odabrati jednu
-aplikaciju za početni ekran (npr. kuhinjski tajmer ili libelu) umjesto
-vremenske prognoze. Zasad ne radi ništa.
+![Aplikacije i kuhinjski tajmer](docs/timer.png)
+
+**Postavke → Aplikacije** bira aplikaciju koja je na početnom ekranu uz
+Postavke: **Vrijeme** (zadano) ili **Kuhinjski tajmer**. Dodirni jednu;
+zelena točka pokazuje odabranu. Za povratak prognoze ponovno odaberi Vrijeme.
+Stići će još aplikacija.
+
+**Kuhinjski tajmer** (dodirni njegovu pločicu na početnom ekranu):
+
+1. Postavi vrijeme s **−** i **+** (minuta po dodiru, do 99) ili dodirni
+   **3 / 5 / 8 / 10 min**. Zadnje korišteno vrijeme se pamti.
+2. Dodirni **Kreni**. Krug odbrojava, a pločica na početnom ekranu pokazuje
+   preostalo vrijeme.
+3. **Pauza** / **Nastavi**, ili **Poništi** za prekid.
+4. Na **0:00** ekran se upali i ploča pišti svake sekunde **10 sekundi**,
+   barem upola glasno (i kad je glasnoća 0 %) i noću. Dodir bilo gdje ili
+   tipka **BOOT** ranije ga zaustavlja.
+
+Odbrojavanje radi i kad odeš na druge stranice ili se ekran ugasi. Dok je
+odbrojavanje na ekranu, ekran se ne gasi.
 
 ## Svakodnevno korištenje
 
 | Radnja | Što radi |
 |---|---|
-| Dodir pločice na početnom ekranu | Otvara Vrijeme ili Postavke |
+| Dodir pločice na početnom ekranu | Otvara Vrijeme (ili Kuhinjski tajmer) ili Postavke |
 | Povlačenje **ulijevo** na ekranu s vremenom | Prognoza za 3 dana |
 | Povlačenje **udesno** ili **‹** gore lijevo | Natrag |
 | **Postavke → Zaslon** | Klizač za svjetlinu; **Gašenje ekrana** bira kad se ekran gasi; **Noćno zatamnjenje** pali/gasi tamniji ekran noću (22:00 do 07:00) |
+| **Postavke → Aplikacije** | Vrijeme ili Kuhinjski tajmer na početnom ekranu |
 | **Postavke → Zvuk** | Klizač za glasnoću (kratki ton kad pustiš prst); dodir ispod njega pali/gasi zvono svaki sat |
-| Tipka **BOOT** | Osvježi prognozu odmah (gore piše "Osvježavam…"); pali ugašen ekran |
+| Tipka **BOOT** | Osvježi prognozu odmah (gore piše "Osvježavam…"); pali ugašen ekran; zaustavlja zvono tajmera |
 | Dodir tamnog ekrana ili podizanje sata | Pali ekran |
 | **PWR**, kratko | Ekran gasi / pali |
 | Povlačenje gore / dolje u **Postavkama** | Pomiče popis (dolje su Aplikacije, Jezik, Isključi) |

@@ -20,6 +20,9 @@ void playChime();
 // One short soft note (volume preview).
 void playBlip();
 
+// Kitchen timer alarm: three quick beeps, at least half volume.
+void playAlarm();
+
 // True from play*() until the sound has finished.
 bool busy();
 

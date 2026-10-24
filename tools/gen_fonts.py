@@ -22,7 +22,7 @@ TEXT = ASCII + CROATIAN + EXTRA
 # (C name, font file, pixel size, characters)
 FONTS = [
     ("kFontClock", "InterDisplay-Light.otf", 112, "0123456789:-"),
-    ("kFontTemp", "InterDisplay-Light.otf", 84, "0123456789-.° %"),
+    ("kFontTemp", "InterDisplay-Light.otf", 84, "0123456789-.° %:+"),
     ("kFontTitle", "Inter-SemiBold.otf", 26, TEXT),
     ("kFontBody", "Inter-Regular.otf", 21, TEXT),
     ("kFontSmall", "Inter-Medium.otf", 17, TEXT),

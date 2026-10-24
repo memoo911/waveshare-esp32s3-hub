@@ -81,14 +81,16 @@ The speaker works (ES8311 codec). No sounds on touch.
 
 ## Next (planned order)
 
-### 7. Apps: the app switcher, kitchen timer, spirit level
+### 7. Apps ✅ app switcher and kitchen timer (to verify on hardware) · spirit level next
 
-Settings → **Apps** lists the apps; the chosen one replaces Weather on
-the home screen (one app at a time, Settings always there). First app:
-**kitchen timer**: pick the minutes (e.g. 8:00 for pasta) with +/- buttons
-or quick presets, start, big countdown, rings at 0:00 until tapped (also when
-the screen is off; the screen wakes up). Then:
+Settings → **Apps** chooses the app on the home screen next to Settings:
+Weather (default) or **Kitchen timer**. Timer: − / + and 3/5/8/10 min
+presets (last time remembered), countdown ring, pause/resume/reset; at 0:00
+the screen wakes and it beeps once a second for 10 seconds (at least half
+volume, also at night), tap or BOOT stops it. Keeps counting on other pages
+and with the screen off; the screen stays on while the countdown is shown.
 
+Next:
 - **Spirit level**: bubble level from the accelerometer (flat on a table) and
   a bar level when standing on an edge, angles in degrees, "zero" button to
   calibrate, screen stays on while open

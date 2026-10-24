@@ -57,6 +57,9 @@ constexpr int VOLUME_DEFAULT_PERCENT = 60;
 // The hourly chime (off by default) stays silent at night
 // (NIGHT_START_HOUR..NIGHT_END_HOUR).
 
+// Kitchen timer: how long the alarm beeps (once a second) when time is up.
+constexpr unsigned long TIMER_RING_MS = 10UL * 1000UL;
+
 // ============= Battery care =============
 // On USB, charging pauses at BATTERY_FULL_PERCENT and resumes only once the
 // battery has dropped to BATTERY_RESUME_PERCENT, so a clock that lives on the

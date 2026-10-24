@@ -241,7 +241,7 @@ void openPage(Page p) {
   if (p == Page::Location) net::setWebWanted(true);
   static const char *names[] = {"home",       "weather", "forecast",   "settings",
                                 "brightness", "wifi",    "wifi setup", "location",
-                                "sound",      "turn off"};
+                                "sound",      "turn off", "apps",       "timer"};
   Serial.printf("[UI] page %s\n", names[static_cast<int>(p)]);
 }
 
@@ -250,6 +250,97 @@ void toggleLanguage() {
   prefs.putUChar("lang", static_cast<uint8_t>(language));
   net::setPortalCroatian(language == Lang::Hr);
   Serial.printf("[UI] language %s\n", language == Lang::Hr ? "hr" : "en");
+}
+
+// ---------------------------------------------------------------------------
+// Apps and the kitchen timer
+// ---------------------------------------------------------------------------
+HomeApp homeApp = HomeApp::Weather;
+
+TimerState timerState = TimerState::Idle;
+int timerMinutes = 8;                // chosen time, saved in NVS
+int timerTotalSec = 0;
+unsigned long timerEndMs = 0;        // Running
+unsigned long timerLeftMs = 0;       // Paused
+unsigned long ringStartMs = 0;       // Ringing
+unsigned long nextBeepMs = 0;
+
+void setHomeApp(int index) {
+  if (index < 0 || index >= kHomeAppCount || index == static_cast<int>(homeApp)) return;
+  homeApp = static_cast<HomeApp>(index);
+  prefs.putUChar("app", static_cast<uint8_t>(index));
+  Serial.printf("[UI] home app %s\n", homeApp == HomeApp::Timer ? "timer" : "weather");
+}
+
+int timerRemainingSec() {
+  if (timerState == TimerState::Running) {
+    const long ms = static_cast<long>(timerEndMs - millis());
+    return ms > 0 ? static_cast<int>((ms + 999) / 1000) : 0;
+  }
+  if (timerState == TimerState::Paused) return static_cast<int>((timerLeftMs + 999) / 1000);
+  return 0;
+}
+
+void setTimerMinutes(int m) {
+  timerMinutes = constrain(m, 1, ui::kTimerMaxMinutes);
+}
+
+void timerAction(ui::TimerAction a, int preset) {
+  using ui::TimerAction;
+  switch (a) {
+  case TimerAction::Minus: setTimerMinutes(timerMinutes - 1); break;
+  case TimerAction::Plus: setTimerMinutes(timerMinutes + 1); break;
+  case TimerAction::Preset: setTimerMinutes(preset); break;
+  case TimerAction::Start:
+    timerTotalSec = timerMinutes * 60;
+    timerEndMs = millis() + timerTotalSec * 1000UL;
+    timerState = TimerState::Running;
+    prefs.putUChar("tmin", static_cast<uint8_t>(timerMinutes));
+    Serial.printf("[Timer] start %d min\n", timerMinutes);
+    break;
+  case TimerAction::Pause:
+    timerLeftMs = static_cast<unsigned long>(max(0L, static_cast<long>(timerEndMs - millis())));
+    timerState = TimerState::Paused;
+    Serial.println("[Timer] pause");
+    break;
+  case TimerAction::Resume:
+    timerEndMs = millis() + timerLeftMs;
+    timerState = TimerState::Running;
+    Serial.println("[Timer] resume");
+    break;
+  case TimerAction::Reset:
+    timerState = TimerState::Idle;
+    Serial.println("[Timer] reset");
+    break;
+  case TimerAction::Stop:
+    timerState = TimerState::Idle;
+    Serial.println("[Timer] stop");
+    break;
+  case TimerAction::None: break;
+  }
+}
+
+// Countdown and alarm; runs every loop pass, also while the screen is off.
+void updateTimer() {
+  const unsigned long now = millis();
+  if (timerState == TimerState::Running && static_cast<long>(now - timerEndMs) >= 0) {
+    Serial.println("[Timer] time's up");
+    timerState = TimerState::Ringing;
+    ringStartMs = now;
+    nextBeepMs = now;
+    setScreenOn(true);
+    openPage(Page::Timer);
+  }
+  if (timerState == TimerState::Ringing) {
+    lastActivityMs = now; // keep the screen on while it rings
+    if (now - ringStartMs >= TIMER_RING_MS) {
+      Serial.println("[Timer] alarm over");
+      timerState = TimerState::Idle;
+    } else if (static_cast<long>(now - nextBeepMs) >= 0) {
+      audio::playAlarm();
+      nextBeepMs += 1000;
+    }
+  }
 }
 
 // Settings -> Turn off -> red button: save what's pending and switch the board off through
@@ -292,7 +383,9 @@ void pollButtons() {
   if (bootDown && !bootWasDown) {
     Serial.println("[UI] BOOT");
     lastActivityMs = millis();
-    if (!screenOn) {
+    if (timerState == TimerState::Ringing) {
+      timerAction(ui::TimerAction::Stop, 0);
+    } else if (!screenOn) {
       setScreenOn(true);
     } else {
       requestRefresh();
@@ -318,7 +411,10 @@ void pollButtons() {
 void sleepIfIdle() {
   if (!screenOn) return;
   const int minutes = ui::kScreenOffMinutes[screenOffIndex];
-  if (minutes == 0 || page == Page::WifiSetup || page == Page::Location) {
+  // Stays on: no timeout, a QR code being scanned, or the timer counting
+  // down on screen.
+  const bool timerShown = page == Page::Timer && timerState != TimerState::Idle;
+  if (minutes == 0 || page == Page::WifiSetup || page == Page::Location || timerShown) {
     lastActivityMs = millis();
     return;
   }
@@ -574,6 +670,11 @@ void handleTouch(const UiState &st) {
   Gesture g;
   while (gestureQueue && xQueueReceive(gestureQueue, &g, 0) == pdTRUE) {
     if (!screenOn || wakeTouch) continue;
+    // While the alarm rings, any touch on the timer page stops it.
+    if (page == Page::Timer && timerState == TimerState::Ringing) {
+      timerAction(ui::TimerAction::Stop, 0);
+      continue;
+    }
     // A touch that scrolled the settings list is not a tap or swipe.
     if (touchScrolled) {
       touchScrolled = false;
@@ -600,6 +701,17 @@ void handleTouch(const UiState &st) {
         break;
       }
       pendingDelete = -1;
+      int preset = 0;
+      const ui::TimerAction ta = ui::timerActionAt(st, g.x, g.y, preset);
+      if (ta != ui::TimerAction::None) {
+        timerAction(ta, preset);
+        break;
+      }
+      const int app = ui::appAt(st, g.x, g.y);
+      if (app >= 0) {
+        setHomeApp(app);
+        break;
+      }
       if (ui::tapsPowerOff(st, g.x, g.y)) {
         turnOff();
         break;
@@ -780,6 +892,8 @@ void setup() {
   brightnessSetting = prefs.getUChar("bright", BRIGHTNESS_DEFAULT_PERCENT);
   volumeSetting = prefs.getUChar("vol", VOLUME_DEFAULT_PERCENT);
   chimeOn = prefs.getBool("chime", false);
+  homeApp = static_cast<HomeApp>(prefs.getUChar("app", 0) % kHomeAppCount);
+  timerMinutes = constrain(prefs.getUChar("tmin", 8), 1, ui::kTimerMaxMinutes);
   nightDim = prefs.getBool("nightdim", true);
   screenOffIndex = prefs.getUChar("scroff", SCREEN_TIMEOUT_DEFAULT) % ui::kScreenOffChoices;
   language = static_cast<Lang>(prefs.getUChar("lang", static_cast<uint8_t>(DEFAULT_LANGUAGE)));
@@ -836,6 +950,7 @@ void loop() {
     tzset();
   }
   chimeIfHour();
+  updateTimer();
 
   const unsigned long now = millis();
   // Faster frames while the settings list is being scrolled.
@@ -857,6 +972,11 @@ void loop() {
   st = UiState();
   buildState(st, now);
   st.scroll = settingsScroll;
+  st.app = homeApp;
+  st.timer.state = timerState;
+  st.timer.minutes = timerMinutes;
+  st.timer.remainingSec = timerRemainingSec();
+  st.timer.totalSec = timerTotalSec;
   followSetup(st);
 
   const unsigned long drawStart = millis();

@@ -73,6 +73,15 @@ enum class Str : uint8_t {
   TurnOffQuestion,
   TurnOnHint,
   NightDimming,
+  TimerTile,
+  KitchenTimer,
+  Start,
+  Pause,
+  Resume,
+  Reset,
+  Stop,
+  TimesUp,
+  AppsHint,
   Count
 };
 
@@ -107,7 +116,7 @@ inline const char *tr(Lang lang, Str id) {
       "Sound",
       "Language",
       "Not connected",
-      "Apps come later",
+      "More apps coming later",
       "Drag left or right",
       "Dimmer from 22:00 to 07:00",
       "Connected to %s",
@@ -145,6 +154,15 @@ inline const char *tr(Lang lang, Str id) {
       "Turn off the clock?",
       "Press PWR to turn it on again",
       "Night dimming",
+      "Timer",
+      "Kitchen timer",
+      "Start",
+      "Pause",
+      "Resume",
+      "Reset",
+      "Stop",
+      "Time's up!",
+      "The chosen app is on the home screen",
   };
   static const char *const kHr[] = {
       "Osjeća se %s",
@@ -174,7 +192,7 @@ inline const char *tr(Lang lang, Str id) {
       "Zvuk",
       "Jezik",
       "Nije spojeno",
-      "Aplikacije stižu kasnije",
+      "Još aplikacija stiže kasnije",
       "Povuci prstom lijevo ili desno",
       "Tamnije od 22:00 do 07:00",
       "Spojeno na %s",
@@ -212,6 +230,15 @@ inline const char *tr(Lang lang, Str id) {
       "Isključiti sat?",
       "Ponovno se pali tipkom PWR",
       "Noćno zatamnjenje",
+      "Tajmer",
+      "Kuhinjski tajmer",
+      "Kreni",
+      "Pauza",
+      "Nastavi",
+      "Poništi",
+      "Stop",
+      "Gotovo!",
+      "Odabrana aplikacija je na početnom ekranu",
   };
   static_assert(sizeof(kEn) / sizeof(kEn[0]) == static_cast<int>(Str::Count), "kEn");
   static_assert(sizeof(kHr) / sizeof(kHr[0]) == static_cast<int>(Str::Count), "kHr");

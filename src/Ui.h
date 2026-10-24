@@ -22,9 +22,24 @@ enum class Page : uint8_t {
   WifiSetup,
   Location,
   Sound,
-  PowerOff
+  PowerOff,
+  Apps,
+  Timer
 };
-constexpr int kPageCount = 10;
+constexpr int kPageCount = 12;
+
+// The app shown on the home screen next to Settings (Settings -> Apps).
+enum class HomeApp : uint8_t { Weather = 0, Timer = 1 };
+constexpr int kHomeAppCount = 2;
+
+// Kitchen timer.
+enum class TimerState : uint8_t { Idle, Running, Paused, Ringing };
+struct TimerInfo {
+  TimerState state = TimerState::Idle;
+  int minutes = 8;      // chosen time (Idle)
+  int remainingSec = 0; // Running / Paused
+  int totalSec = 0;     // length of the running countdown
+};
 
 enum class SetupState : uint8_t { Starting, Ready, Saved };
 
@@ -59,6 +74,8 @@ struct DeviceInfo {
 
 struct UiState {
   Page page = Page::Home;
+  HomeApp app = HomeApp::Weather;
+  TimerInfo timer;
   int scroll = 0; // Settings list, pixels scrolled down
   ScreenState screen;
   DeviceInfo info;
@@ -108,12 +125,45 @@ inline void gear(Canvas &c, float cx, float cy, Rgb col, Rgb hole) {
   c.fillCircle(cx, cy, 10, hole);
 }
 
-inline void drawHomeStatic(Canvas &c, const UiState &st) {
-  const ScreenState &s = st.screen;
-  c.clear(kBackground);
-  screen::drawTopBar(c, s);
-  screen::drawClock(c, s);
+// "m:ss" for the timer.
+inline void formatMinSec(char *out, size_t n, int sec) {
+  if (sec < 0) sec = 0;
+  snprintf(out, n, "%d:%02d", sec / 60, sec % 60);
+}
 
+constexpr Rgb kTimerColor = rgb(0xF2B84B);
+
+// Stopwatch icon: ring, crown button and a hand.
+inline void stopwatchGlyph(Canvas &c, float cx, float cy, float r, Rgb col) {
+  c.ring(cx, cy, r, r * 0.16f, col);
+  c.capsule(cx - r * 0.22f, cy - r * 1.32f, cx + r * 0.22f, cy - r * 1.32f, r * 0.11f, col);
+  c.capsule(cx, cy - r * 1.3f, cx, cy - r * 1.05f, r * 0.09f, col);
+  c.capsule(cx, cy, cx, cy - r * 0.62f, r * 0.09f, col);
+  c.fillCircle(cx, cy, r * 0.12f, col);
+}
+
+inline void drawTimerTile(Canvas &c, const UiState &st) {
+  const ScreenState &s = st.screen;
+  const TimerInfo &t = st.timer;
+  const Rect &wt = kWeatherTile;
+  c.roundRectGradient(wt.x, wt.y, wt.w, wt.h, kTileRadius, rgb(0x3A2E17), rgb(0x1C170F));
+  stopwatchGlyph(c, wt.x + wt.w / 2, wt.y + 68, 32, kTimerColor);
+  char buf[16];
+  if (t.state == TimerState::Running || t.state == TimerState::Paused) {
+    formatMinSec(buf, sizeof(buf), t.remainingSec);
+  } else if (t.state == TimerState::Ringing) {
+    snprintf(buf, sizeof(buf), "0:00");
+  } else {
+    snprintf(buf, sizeof(buf), "%d:00", t.minutes);
+  }
+  c.text(kFontTitle, wt.x + wt.w / 2, wt.y + wt.h - 18, buf,
+         t.state == TimerState::Idle ? kMuted : kText, Align::Center);
+  c.text(kFontBody, wt.x + wt.w / 2, kTileLabelBaseline, i18n::tr(s.lang, Str::TimerTile),
+         kText, Align::Center);
+}
+
+inline void drawWeatherTile(Canvas &c, const UiState &st) {
+  const ScreenState &s = st.screen;
   // Weather tile, tinted like the weather card.
   const WeatherData &w = s.weather;
   Rgb top, bottom;
@@ -129,6 +179,16 @@ inline void drawHomeStatic(Canvas &c, const UiState &st) {
   c.text(kFontTitle, wt.x + wt.w / 2, wt.y + wt.h - 18, temp, kText, Align::Center);
   c.text(kFontBody, wt.x + wt.w / 2, kTileLabelBaseline, i18n::tr(s.lang, Str::Weather),
          kText, Align::Center);
+}
+
+inline void drawHomeStatic(Canvas &c, const UiState &st) {
+  const ScreenState &s = st.screen;
+  c.clear(kBackground);
+  screen::drawTopBar(c, s);
+  screen::drawClock(c, s);
+
+  if (st.app == HomeApp::Timer) drawTimerTile(c, st);
+  else drawWeatherTile(c, st);
 
   // Settings tile.
   const Rect &st2 = kSettingsTile;
@@ -142,7 +202,7 @@ inline void drawHomeStatic(Canvas &c, const UiState &st) {
 inline void drawHomeDynamic(Canvas &c, const UiState &st) {
   const ScreenState &s = st.screen;
   screen::drawColon(c, s);
-  if (s.weather.valid) {
+  if (st.app == HomeApp::Weather && s.weather.valid) {
     icons::weather(c, kTileIconCx, kTileIconCy, kTileIconSize, s.weather.code,
                    s.weather.isDay, s.moonPhase, s.animTime);
   }
@@ -245,7 +305,8 @@ inline void drawSettingsList(Canvas &c, const UiState &st) {
   snprintf(buf, sizeof(buf), "%d %%", d.volumePercent);
   drawRow(c, kSoundRow, i18n::tr(L, Str::Sound), buf, true);
   // Not there yet: apps for the home screen.
-  drawRow(c, kAppsRow, i18n::tr(L, Str::Apps), "-", false);
+  drawRow(c, kAppsRow, i18n::tr(L, Str::Apps),
+          i18n::tr(L, st.app == HomeApp::Timer ? Str::KitchenTimer : Str::Weather), true);
   drawRow(c, kLanguageRow, i18n::tr(L, Str::Language), i18n::tr(L, Str::LanguageName), false);
   drawRow(c, kTurnOffRow, i18n::tr(L, Str::TurnOff), "", true, kDanger);
 
@@ -593,6 +654,170 @@ inline void drawPowerOffStatic(Canvas &c, const UiState &st) {
 }
 
 // ---------------------------------------------------------------------------
+// Apps: which app is on the home screen
+// ---------------------------------------------------------------------------
+inline Rect appRowRect(int i) { return Rect{14, 84 + i * 72, 340, 62}; }
+
+inline const char *appName(Lang L, HomeApp a) {
+  return i18n::tr(L, a == HomeApp::Timer ? Str::KitchenTimer : Str::Weather);
+}
+
+inline void drawAppsStatic(Canvas &c, const UiState &st) {
+  const Lang L = st.screen.lang;
+  c.clear(kBackground);
+  drawTitleBar(c, st.screen, i18n::tr(L, Str::Apps));
+  for (int i = 0; i < kHomeAppCount; i++) {
+    const Rect r = appRowRect(i);
+    const bool on = static_cast<int>(st.app) == i;
+    c.roundRect(r.x, r.y, r.w, r.h, 18, on ? rgb(0x1E3A33) : rgb(0x14171D));
+    const float cx = r.x + 30, cy = r.y + r.h / 2.0f;
+    c.ring(cx, cy, 11, 2.2f, on ? kAccent : kMuted);
+    if (on) c.fillCircle(cx, cy, 6, kAccent);
+    c.text(kFontBody, r.x + 56, r.y + r.h / 2 + 7, appName(L, static_cast<HomeApp>(i)), kText);
+  }
+  c.text(kFontSmall, W / 2, 418, i18n::tr(L, Str::AppsHint), kMuted, Align::Center);
+  c.text(kFontSmall, W / 2, 440, i18n::tr(L, Str::SoundSoon), kFaint, Align::Center);
+}
+
+// Tapped app row, or -1.
+inline int appAt(const UiState &st, int x, int y) {
+  if (st.page != Page::Apps) return -1;
+  for (int i = 0; i < kHomeAppCount; i++) {
+    if (inside(appRowRect(i), x, y, 5)) return i;
+  }
+  return -1;
+}
+
+// ---------------------------------------------------------------------------
+// Kitchen timer
+// ---------------------------------------------------------------------------
+enum class TimerAction : uint8_t { None, Minus, Plus, Preset, Start, Pause, Resume, Reset, Stop };
+constexpr int kTimerPresets[] = {3, 5, 8, 10};
+constexpr int kTimerPresetCount = 4;
+constexpr int kTimerMaxMinutes = 99;
+// Idle page.
+constexpr int kTimerValueBaseline = 176;
+constexpr Rect kMinusButton{24, 204, 152, 64};
+constexpr Rect kPlusButton{192, 204, 152, 64};
+inline Rect presetRect(int i) { return Rect{24 + i * 82, 284, 74, 54}; }
+constexpr Rect kStartButton{24, 358, 320, 70};
+// Running / paused page.
+constexpr float kRingCx = 184, kRingCy = 200, kRingR = 108;
+constexpr Rect kRingRect{0, 66, W, 272};
+constexpr Rect kPauseButton{24, 358, 152, 70};
+constexpr Rect kResetButton{192, 358, 152, 70};
+// Ringing page.
+constexpr Rect kStopButton{24, 300, 320, 120};
+constexpr Rgb kRingingBg = rgb(0x2A0E0E);
+
+inline void pill(Canvas &c, const Rect &r, Rgb bg) {
+  c.roundRect(r.x, r.y, r.w, r.h, r.h / 2.0f, bg);
+}
+
+inline void pillLabel(Canvas &c, const Rect &r, const Font &f, const char *text, Rgb col,
+                      int dy = 7) {
+  c.text(f, r.x + r.w / 2, r.y + r.h / 2 + dy, text, col, Align::Center);
+}
+
+inline void drawTimerIdle(Canvas &c, const UiState &st) {
+  const Lang L = st.screen.lang;
+  const TimerInfo &t = st.timer;
+  char buf[16];
+  snprintf(buf, sizeof(buf), "%d:00", t.minutes);
+  c.text(kFontTemp, W / 2, kTimerValueBaseline, buf, kText, Align::Center);
+  pill(c, kMinusButton, rgb(0x14171D));
+  pillLabel(c, kMinusButton, kFontTemp, "-", kText, 26);
+  pill(c, kPlusButton, rgb(0x14171D));
+  pillLabel(c, kPlusButton, kFontTemp, "+", kText, 26);
+  for (int i = 0; i < kTimerPresetCount; i++) {
+    const Rect r = presetRect(i);
+    const bool on = t.minutes == kTimerPresets[i];
+    c.roundRect(r.x, r.y, r.w, r.h, r.h / 2.0f, on ? rgb(0x3A2E17) : rgb(0x14171D));
+    snprintf(buf, sizeof(buf), "%d min", kTimerPresets[i]);
+    pillLabel(c, r, kFontSmall, buf, on ? kTimerColor : kText, 6);
+  }
+  pill(c, kStartButton, kTimerColor);
+  pillLabel(c, kStartButton, kFontTitle, i18n::tr(L, Str::Start), rgb(0x000000), 9);
+}
+
+inline void drawTimerButtons(Canvas &c, const UiState &st) {
+  const Lang L = st.screen.lang;
+  const bool paused = st.timer.state == TimerState::Paused;
+  pill(c, kPauseButton, rgb(0x14171D));
+  pillLabel(c, kPauseButton, kFontBody, i18n::tr(L, paused ? Str::Resume : Str::Pause),
+            paused ? kTimerColor : kText);
+  pill(c, kResetButton, rgb(0x14171D));
+  pillLabel(c, kResetButton, kFontBody, i18n::tr(L, Str::Reset), kDanger);
+}
+
+inline void drawTimerRing(Canvas &c, const UiState &st) {
+  const TimerInfo &t = st.timer;
+  const bool paused = t.state == TimerState::Paused;
+  c.ring(kRingCx, kRingCy, kRingR, 14, rgb(0x2A2F38));
+  // Remaining part of the ring, clockwise from the top, drawn as short arcs.
+  const float frac = t.totalSec > 0 ? clamp01(static_cast<float>(t.remainingSec) / t.totalSec) : 0;
+  const int steps = static_cast<int>(frac * 120);
+  const Rgb col = paused ? kMuted : kTimerColor;
+  for (int i = 0; i < steps; i++) {
+    const float a0 = -1.5707963f + i * (6.2831853f / 120);
+    const float a1 = a0 + 6.2831853f / 120;
+    c.capsule(kRingCx + cosf(a0) * kRingR, kRingCy + sinf(a0) * kRingR,
+              kRingCx + cosf(a1) * kRingR, kRingCy + sinf(a1) * kRingR, 7, col);
+  }
+  char buf[16];
+  formatMinSec(buf, sizeof(buf), t.remainingSec);
+  c.text(kFontTemp, static_cast<int>(kRingCx), static_cast<int>(kRingCy) + 30, buf,
+         paused ? kMuted : kText, Align::Center);
+}
+
+inline void drawTimerStatic(Canvas &c, const UiState &st) {
+  const Lang L = st.screen.lang;
+  const TimerInfo &t = st.timer;
+  if (t.state == TimerState::Ringing) {
+    c.clear(kRingingBg);
+    drawTitleBar(c, st.screen, i18n::tr(L, Str::TimerTile));
+    stopwatchGlyph(c, W / 2.0f, 120, 26, kTimerColor);
+    c.text(kFontTemp, W / 2, 240, "0:00", kText, Align::Center);
+    c.text(kFontTitle, W / 2, 280, i18n::tr(L, Str::TimesUp), kTimerColor, Align::Center);
+    pill(c, kStopButton, kDanger);
+    pillLabel(c, kStopButton, kFontTitle, i18n::tr(L, Str::Stop), rgb(0x000000), 9);
+    return;
+  }
+  c.clear(kBackground);
+  drawTitleBar(c, st.screen, i18n::tr(L, Str::TimerTile));
+  if (t.state == TimerState::Idle) drawTimerIdle(c, st);
+  else drawTimerButtons(c, st);
+}
+
+inline TimerAction timerActionAt(const UiState &st, int x, int y, int &preset) {
+  if (st.page != Page::Timer) return TimerAction::None;
+  const TimerInfo &t = st.timer;
+  switch (t.state) {
+  case TimerState::Ringing:
+    return TimerAction::Stop; // anywhere on the screen
+  case TimerState::Idle:
+    if (inside(kMinusButton, x, y, 6)) return TimerAction::Minus;
+    if (inside(kPlusButton, x, y, 6)) return TimerAction::Plus;
+    for (int i = 0; i < kTimerPresetCount; i++) {
+      if (inside(presetRect(i), x, y, 4)) {
+        preset = kTimerPresets[i];
+        return TimerAction::Preset;
+      }
+    }
+    if (inside(kStartButton, x, y, 10)) return TimerAction::Start;
+    return TimerAction::None;
+  case TimerState::Running:
+  case TimerState::Paused:
+    if (inside(kPauseButton, x, y, 10)) {
+      return t.state == TimerState::Paused ? TimerAction::Resume : TimerAction::Pause;
+    }
+    if (inside(kResetButton, x, y, 10)) return TimerAction::Reset;
+    return TimerAction::None;
+  }
+  return TimerAction::None;
+}
+
+// ---------------------------------------------------------------------------
 // Page dispatch
 // ---------------------------------------------------------------------------
 inline void drawStatic(Canvas &c, const UiState &st) {
@@ -607,6 +832,8 @@ inline void drawStatic(Canvas &c, const UiState &st) {
   case Page::Location: drawLocationStatic(c, st); break;
   case Page::Sound: drawSoundStatic(c, st); break;
   case Page::PowerOff: drawPowerOffStatic(c, st); break;
+  case Page::Apps: drawAppsStatic(c, st); break;
+  case Page::Timer: drawTimerStatic(c, st); break;
   }
 }
 
@@ -634,6 +861,12 @@ inline int dynamicRects(const Canvas &c, const UiState &st, Rect out[4]) {
   case Page::Sound:
     out[0] = kVolumeDynamic;
     return 1;
+  case Page::Timer:
+    if (st.timer.state == TimerState::Running || st.timer.state == TimerState::Paused) {
+      out[0] = kRingRect;
+      return 1;
+    }
+    return 0;
   default:
     return 0;
   }
@@ -646,6 +879,11 @@ inline void drawDynamic(Canvas &c, const UiState &st) {
   case Page::Forecast: screen::drawForecastDynamic(c, st.screen); break;
   case Page::Brightness: drawBrightnessDynamic(c, st); break;
   case Page::Sound: drawSoundDynamic(c, st); break;
+  case Page::Timer:
+    if (st.timer.state == TimerState::Running || st.timer.state == TimerState::Paused) {
+      drawTimerRing(c, st);
+    }
+    break;
   default: break;
   }
 }
@@ -700,9 +938,21 @@ inline uint32_t staticKey(const UiState &st) {
   h.add(s.weatherStale); h.str(s.message); h.str(s.city);
   h.add(s.wifiConnected); h.add(s.showBack); h.str(s.toast); h.add(s.lang);
   const DeviceInfo &d = st.info;
+  const TimerInfo &t = st.timer;
   switch (st.page) {
+  case Page::Home:
+    h.add(st.app);
+    if (st.app == HomeApp::Timer) { h.add(t.state); h.add(t.minutes); h.add(t.remainingSec); }
+    break;
+  case Page::Apps:
+    h.add(st.app);
+    break;
+  case Page::Timer:
+    h.add(t.state); h.add(t.minutes);
+    break;
   case Page::Settings:
     h.str(d.ssid); h.str(d.ip); h.add(d.brightnessPercent); h.add(d.volumePercent);
+    h.add(st.app);
     break;
   case Page::Wifi:
     h.str(d.ssid); h.add(d.rssi / 5); h.str(d.ip); h.add(d.pendingDelete);
@@ -737,6 +987,9 @@ inline uint32_t dynamicKey(const UiState &st, uint32_t frameNo) {
   case Page::Sound:
     h.add(st.info.volumePercent);
     return h.h;
+  case Page::Timer:
+    h.add(st.timer.state); h.add(st.timer.remainingSec);
+    return h.h;
   case Page::Home:
   case Page::Weather: {
     h.add(s.second % 2); h.add(s.timeValid);
@@ -768,7 +1021,8 @@ inline Page parentOf(Page p) {
   case Page::Sound:
   case Page::PowerOff:
   case Page::Wifi:
-  case Page::Location: return Page::Settings;
+  case Page::Location:
+  case Page::Apps: return Page::Settings;
   case Page::WifiSetup: return Page::Wifi;
   default: return Page::Home;
   }
@@ -782,7 +1036,9 @@ inline Page onTap(const UiState &st, int x, int y) {
   }
   switch (p) {
   case Page::Home:
-    if (inside(kWeatherTile, x, y, kTouchMargin)) return Page::Weather;
+    if (inside(kWeatherTile, x, y, kTouchMargin)) {
+      return st.app == HomeApp::Timer ? Page::Timer : Page::Weather;
+    }
     if (inside(kSettingsTile, x, y, kTouchMargin)) return Page::Settings;
     break;
   case Page::Settings:
@@ -791,6 +1047,7 @@ inline Page onTap(const UiState &st, int x, int y) {
     if (inside(rowRect(kLocationRow), x, y, kRowGap / 2)) return Page::Location;
     if (inside(rowRect(kBrightnessRow), x, y, kRowGap / 2)) return Page::Brightness;
     if (inside(rowRect(kSoundRow), x, y, kRowGap / 2)) return Page::Sound;
+    if (inside(rowRect(kAppsRow), x, y, kRowGap / 2)) return Page::Apps;
     // Last row: the footer under it counts too.
     if (inside(Rect{14, rowRect(kTurnOffRow).y, 340, kSettingsContentH}, x, y, kRowGap / 2)) {
       return Page::PowerOff;

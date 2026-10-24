@@ -117,6 +117,17 @@ int main(int argc, char **argv) {
       {"brightness_en", Page::Brightness, 3, true, 12.6f, 0.3f, 17, Lang::En},
       {"sound_en", Page::Sound, 3, true, 12.6f, 0.3f, 17, Lang::En},
       {"poweroff", Page::PowerOff, 3, true, 12.6f, 0.3f, 17},
+      {"apps", Page::Apps, 3, true, 12.6f, 0.3f, 17},
+      {"home_timer", Page::Home, 3, true, 12.6f, 0.3f, 17},
+      {"timer_idle", Page::Timer, 3, true, 12.6f, 0.3f, 17},
+      {"timer_running", Page::Timer, 3, true, 12.6f, 0.3f, 17},
+      {"timer_paused", Page::Timer, 3, true, 12.6f, 0.3f, 17},
+      {"timer_ringing", Page::Timer, 3, true, 12.6f, 0.3f, 17},
+      {"apps_en", Page::Apps, 3, true, 12.6f, 0.3f, 17, Lang::En},
+      {"home_timer_en", Page::Home, 3, true, 12.6f, 0.3f, 17, Lang::En},
+      {"timer_idle_en", Page::Timer, 3, true, 12.6f, 0.3f, 17, Lang::En},
+      {"timer_running_en", Page::Timer, 3, true, 12.6f, 0.3f, 17, Lang::En},
+      {"timer_ringing_en", Page::Timer, 3, true, 12.6f, 0.3f, 17, Lang::En},
       {"poweroff_en", Page::PowerOff, 3, true, 12.6f, 0.3f, 17, Lang::En},
       {"night_en", Page::Weather, 0, false, 4.2f, 0.62f, 23, Lang::En},
   };
@@ -135,6 +146,15 @@ int main(int argc, char **argv) {
       snprintf(st.info.ip, sizeof(st.info.ip), "192.168.1.50");
     }
     if (name == "sound") st.info.chimeOn = true;
+    if (name.rfind("apps", 0) == 0 || name.rfind("home_timer", 0) == 0) st.app = HomeApp::Timer;
+    if (name.rfind("home_timer", 0) == 0 || name.rfind("timer_running", 0) == 0 ||
+        name.rfind("timer_paused", 0) == 0) {
+      st.timer.state = name.rfind("timer_paused", 0) == 0 ? TimerState::Paused
+                                                         : TimerState::Running;
+      st.timer.totalSec = 8 * 60;
+      st.timer.remainingSec = 7 * 60 + 42;
+    }
+    if (name.rfind("timer_ringing", 0) == 0) st.timer.state = TimerState::Ringing;
     if (name == "wifi_en") {
       snprintf(st.info.nets[0].ssid, 33, "My phone hotspot");
       snprintf(st.info.nets[1].ssid, 33, "Network");

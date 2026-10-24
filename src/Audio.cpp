@@ -13,7 +13,9 @@ constexpr i2s_port_t kPort = I2S_NUM_0;
 constexpr int kRate = 24000;
 constexpr int kChunk = 256; // frames per write
 
-enum Sound : uint32_t { kNone = 0, kChime = 1, kBlip = 2 };
+enum Sound : uint32_t { kNone = 0, kChime = 1, kBlip = 2, kAlarm = 3 };
+// The timer alarm is never quieter than this, even with the volume at 0 %.
+constexpr int kAlarmMinVolume = 50;
 
 SemaphoreHandle_t i2c = nullptr;
 TaskHandle_t task = nullptr;
@@ -71,8 +73,7 @@ bool initHardware() {
 
 // Volume percent to the codec's DAC level: 1 % is about -45 dB, 100 % is
 // +6 dB (the samples are written at half scale).
-void applyVolume() {
-  const int v = volume;
+void applyVolume(int v) {
   int setting = 0;
   if (v > 0) {
     const float db = -45.0f + 51.0f * v / 100.0f;
@@ -120,16 +121,23 @@ void render(const Note *notes, int count, float total) {
 }
 
 void play(uint32_t sound) {
-  if (volume <= 0) return;
+  const int v = sound == kAlarm ? max(static_cast<int>(volume), kAlarmMinVolume) : volume;
+  if (v <= 0) return;
   if (!ready) ready = initHardware();
   if (!ready) return;
-  applyVolume();
+  applyVolume(v);
   i2s_start(kPort);
   digitalWrite(AUDIO_PA_ENABLE_PIN, HIGH);
   delay(30); // amplifier settles
   if (sound == kChime) {
     const Note notes[] = {{1318.5f, 0.0f, 1.2f, 0.45f}, {1046.5f, 0.45f, 1.6f, 0.6f}};
     render(notes, 2, 2.1f);
+  } else if (sound == kAlarm) {
+    // Three quick bright beeps.
+    const Note notes[] = {{2093.0f, 0.0f, 0.12f, 0.2f},
+                          {2093.0f, 0.18f, 0.12f, 0.2f},
+                          {2093.0f, 0.36f, 0.12f, 0.2f}};
+    render(notes, 3, 0.5f);
   } else {
     const Note notes[] = {{1046.5f, 0.0f, 0.25f, 0.08f}};
     render(notes, 1, 0.3f);
@@ -170,6 +178,12 @@ void playBlip() {
   if (!task) return;
   playing = true;
   xTaskNotify(task, kBlip, eSetValueWithOverwrite);
+}
+
+void playAlarm() {
+  if (!task) return;
+  playing = true;
+  xTaskNotify(task, kAlarm, eSetValueWithOverwrite);
 }
 
 bool busy() { return playing; }
