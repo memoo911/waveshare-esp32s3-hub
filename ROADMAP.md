@@ -99,7 +99,9 @@ Weather (default), **Kitchen timer** or **Spirit level**.
   "Set zero" removes. Possible later: two-step zero (tap, turn 180°, tap) that
   also works on a surface that isn't level.
 
-Later: alarm clock, calculator, music player (SD card).
+Later: **Avatar** (an animated character, later the face of an AI
+assistant; design to be agreed first), alarm clock, calculator, music player
+(SD card).
 
 ### 8. Updates over WiFi (OTA)
 
