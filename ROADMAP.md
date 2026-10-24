@@ -81,7 +81,7 @@ The speaker works (ES8311 codec). No sounds on touch.
 
 ## Next (planned order)
 
-### 7. Apps ✅ app switcher and kitchen timer (to verify on hardware) · spirit level next
+### 7. Apps ✅ app switcher and kitchen timer (verified on hardware) · spirit level next
 
 Settings → **Apps** chooses the app on the home screen next to Settings:
 Weather (default) or **Kitchen timer**. Timer: − / + and 3/5/8/10 min
