@@ -244,10 +244,11 @@ void openPage(Page p) {
   page = p;
   if (p == Page::WifiSetup) net::setSetupWanted(true);
   if (p == Page::Location) net::setWebWanted(true);
-  static const char *names[] = {"home",       "weather", "forecast",   "settings",
-                                "brightness", "wifi",    "wifi setup", "location",
-                                "sound",      "turn off", "apps",       "timer",
-                                "level"};
+  static const char *const names[] = {"home",       "weather", "forecast",   "settings",
+                                      "brightness", "wifi",    "wifi setup", "location",
+                                      "sound",      "turn off", "apps",       "timer",
+                                      "level",      "avatar"};
+  static_assert(sizeof(names) / sizeof(names[0]) == kPageCount, "a name for every page");
   Serial.printf("[UI] page %s\n", names[static_cast<int>(p)]);
 }
 
@@ -276,6 +277,7 @@ void setHomeApp(int index) {
   homeApp = static_cast<HomeApp>(index);
   prefs.putUChar("app", static_cast<uint8_t>(index));
   static const char *const names[] = {"weather", "timer", "level", "avatar"};
+  static_assert(sizeof(names) / sizeof(names[0]) == kHomeAppCount, "a name for every app");
   Serial.printf("[UI] home app %s\n", names[index]);
 }
 
