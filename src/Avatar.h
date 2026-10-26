@@ -12,6 +12,7 @@
 // inflated with the inflater in the ESP32-S3 ROM (zlib on the PC preview).
 
 #include <stdint.h>
+#include <stdlib.h>
 #include <string.h>
 
 #if __has_include("AvatarArt.h")
@@ -51,8 +52,16 @@ inline bool decodeFrame(Activity a, int frame, uint8_t *scratch, uint16_t *out) 
   const size_t srcLen = avatar_art::kSize[i];
   const size_t want = static_cast<size_t>(kW) * kH;
 #if defined(ARDUINO)
-  const size_t got = tinfl_decompress_mem_to_mem(scratch, want, src, srcLen, 0);
-  if (got != want) return false;
+  // Not tinfl_decompress_mem_to_mem(): it keeps its ~11 KB decompressor on
+  // the stack, more than the 8 KB loop task has. Allocate it once instead.
+  static tinfl_decompressor *dec = nullptr;
+  if (!dec) dec = static_cast<tinfl_decompressor *>(malloc(sizeof(tinfl_decompressor)));
+  if (!dec) return false;
+  tinfl_init(dec);
+  size_t inLen = srcLen, outLen = want;
+  const tinfl_status status = tinfl_decompress(dec, src, &inLen, scratch, scratch, &outLen,
+                                               TINFL_FLAG_USING_NON_WRAPPING_OUTPUT_BUF);
+  if (status != TINFL_STATUS_DONE || outLen != want) return false;
 #else
   z_stream z = {};
   if (inflateInit2(&z, -15) != Z_OK) return false;
