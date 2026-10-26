@@ -140,7 +140,14 @@ int main(int argc, char **argv) {
       {"timer_ringing_en", Page::Timer, 3, true, 12.6f, 0.3f, 17, Lang::En},
       {"poweroff_en", Page::PowerOff, 3, true, 12.6f, 0.3f, 17, Lang::En},
       {"night_en", Page::Weather, 0, false, 4.2f, 0.62f, 23, Lang::En},
+      {"home_avatar", Page::Home, 3, true, 12.6f, 0.3f, 17},
+      {"avatar", Page::Avatar, 3, true, 12.6f, 0.3f, 17},
+      {"avatar_en", Page::Avatar, 3, true, 12.6f, 0.3f, 17, Lang::En},
   };
+  // Avatar frame (only when the private artwork is installed; build with -lz).
+  std::vector<uint8_t> avScratch(avatar::kW * avatar::kH);
+  std::vector<uint16_t> avPixels(avatar::kW * avatar::kH);
+  const bool avOk = avatar::decodeFrame(avatar::Activity::Wave, 3, avScratch.data(), avPixels.data());
   for (const Case &cs : cases) {
     UiState st = makeState(cs.page, cs.code, cs.day, cs.temp, cs.phase, cs.hour, cs.lang);
     const std::string name = cs.name;
@@ -179,6 +186,8 @@ int main(int argc, char **argv) {
       snprintf(st.info.nets[1].ssid, 33, "Network");
       st.info.nets[1].fromCode = false;
     }
+    if (name == "home_avatar") st.app = HomeApp::Avatar;
+    if (name.rfind("avatar", 0) == 0 && avOk) st.avatar.pixels = avPixels.data();
     if (name.rfind("settings_end", 0) == 0) {
       st.scroll = ui::kSettingsMaxScroll;
     }
