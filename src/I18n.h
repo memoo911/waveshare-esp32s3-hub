@@ -87,13 +87,6 @@ enum class Str : uint8_t {
   SetZero,
   LevelOk,
   NoSensor,
-  AvatarApp,
-  AvWave,
-  AvListen,
-  AvDance,
-  AvRest,
-  AvType,
-  AvSleep,
   Count
 };
 
@@ -180,13 +173,6 @@ inline const char *tr(Lang lang, Str id) {
       "Set zero",
       "Level",
       "Motion sensor not found",
-      "Avatar",
-      "Waving",
-      "Listening to music",
-      "Dancing",
-      "Resting",
-      "Typing",
-      "Sleeping",
   };
   static const char *const kHr[] = {
       "Osjeća se %s",
@@ -268,13 +254,6 @@ inline const char *tr(Lang lang, Str id) {
       "Nula",
       "Ravno",
       "Senzor pokreta nije pronađen",
-      "Avatar",
-      "Maše",
-      "Sluša glazbu",
-      "Pleše",
-      "Odmara",
-      "Tipka",
-      "Spava",
   };
   static_assert(sizeof(kEn) / sizeof(kEn[0]) == static_cast<int>(Str::Count), "kEn");
   static_assert(sizeof(kHr) / sizeof(kHr[0]) == static_cast<int>(Str::Count), "kHr");

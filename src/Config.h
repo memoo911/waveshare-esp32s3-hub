@@ -67,10 +67,6 @@ constexpr bool LEVEL_SWAP_XY = true;
 constexpr bool LEVEL_FLIP_X = true;
 constexpr bool LEVEL_FLIP_Y = false;
 
-// Avatar app: how long it keeps doing one thing before picking another
-// (it sleeps at night, NIGHT_START_HOUR..NIGHT_END_HOUR).
-constexpr unsigned long AVATAR_ACTIVITY_MS = 45UL * 1000UL;
-
 // Kitchen timer: when time is up, an old wind-up bell rings for 2 s every
 // TIMER_RING_EVERY_MS, for TIMER_RING_MS in total (4 rings).
 constexpr unsigned long TIMER_RING_MS = 10UL * 1000UL;

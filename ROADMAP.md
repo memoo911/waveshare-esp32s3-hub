@@ -81,14 +81,14 @@ The speaker works (ES8311 codec). No sounds on touch.
 
 ## Next (planned order)
 
-### 7. Apps ✅ app switcher, kitchen timer, spirit level (verified on hardware), avatar (new)
+### 7. Apps ✅ app switcher, kitchen timer, spirit level (verified on hardware)
 
 Settings → **Apps** chooses the app on the home screen next to Settings:
 Weather (default), **Kitchen timer** or **Spirit level**.
 
 - **Kitchen timer**: − / + and 3/5/8/10 min presets (last time remembered),
-  countdown ring, pause/resume/reset; at 0:00 the screen wakes and it rings
-  like an old wind-up kitchen timer for 10 seconds (at least half volume, also at night), tap or
+  countdown ring, pause/resume/reset; at 0:00 the screen wakes and it beeps
+  once a second for 10 seconds (at least half volume, also at night), tap or
   BOOT stops it. Keeps counting on other pages and with the screen off; the
   screen stays on while the countdown is shown.
 - **Spirit level**: round bubble level when flat (X/Y and total tilt), tube
@@ -99,12 +99,9 @@ Weather (default), **Kitchen timer** or **Spirit level**.
   "Set zero" removes. Possible later: two-step zero (tap, turn 180°, tap) that
   also works on a surface that isn't level.
 
-- **Avatar**: animated character (private artwork in a gitignored
-  `src/AvatarArt.h`, placeholder without it), six activities with 16 frames
-  each, a new one every 45 s, asleep at night. Later: react to touch, follow
-  the weather, become the face of an AI assistant.
-
-Later: alarm clock, calculator, music player (SD card).
+Later: **Avatar** (an animated character, later the face of an AI
+assistant; design to be agreed first), alarm clock, calculator, music player
+(SD card).
 
 ### 8. Updates over WiFi (OTA)
 

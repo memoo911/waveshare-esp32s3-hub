@@ -244,11 +244,10 @@ void openPage(Page p) {
   page = p;
   if (p == Page::WifiSetup) net::setSetupWanted(true);
   if (p == Page::Location) net::setWebWanted(true);
-  static const char *const names[] = {"home",       "weather", "forecast",   "settings",
-                                      "brightness", "wifi",    "wifi setup", "location",
-                                      "sound",      "turn off", "apps",       "timer",
-                                      "level",      "avatar"};
-  static_assert(sizeof(names) / sizeof(names[0]) == kPageCount, "a name for every page");
+  static const char *names[] = {"home",       "weather", "forecast",   "settings",
+                                "brightness", "wifi",    "wifi setup", "location",
+                                "sound",      "turn off", "apps",       "timer",
+                                "level"};
   Serial.printf("[UI] page %s\n", names[static_cast<int>(p)]);
 }
 
@@ -276,52 +275,7 @@ void setHomeApp(int index) {
   if (index < 0 || index >= kHomeAppCount || index == static_cast<int>(homeApp)) return;
   homeApp = static_cast<HomeApp>(index);
   prefs.putUChar("app", static_cast<uint8_t>(index));
-  static const char *const names[] = {"weather", "timer", "level", "avatar"};
-  static_assert(sizeof(names) / sizeof(names[0]) == kHomeAppCount, "a name for every app");
-  Serial.printf("[UI] home app %s\n", names[index]);
-}
-
-// Avatar: a new activity every AVATAR_ACTIVITY_MS, asleep at night. Frames
-// are inflated into PSRAM buffers only while its page is on screen.
-avatar::Activity avatarActivity = avatar::Activity::Wave;
-unsigned long avatarSinceMs = 0;
-int avatarFrame = 0;
-uint8_t *avatarScratch = nullptr;
-uint16_t *avatarPixels = nullptr;
-
-void setAvatarActivity(avatar::Activity a, unsigned long now) {
-  avatarActivity = a;
-  avatarSinceMs = now;
-  avatarFrame = 0;
-  Serial.printf("[Avatar] activity %d\n", static_cast<int>(a));
-}
-
-void updateAvatar(UiState &st, unsigned long now) {
-  using avatar::Activity;
-  const bool night =
-      st.screen.timeValid && (st.screen.hour >= NIGHT_START_HOUR || st.screen.hour < NIGHT_END_HOUR);
-  if (night) {
-    if (avatarActivity != Activity::Sleep) setAvatarActivity(Activity::Sleep, now);
-  } else if (avatarActivity == Activity::Sleep || now - avatarSinceMs >= AVATAR_ACTIVITY_MS) {
-    // Any daytime activity except the one just shown (Sleep is the last one).
-    int next;
-    do {
-      next = static_cast<int>(random(0, avatar::kActivityCount - 1));
-    } while (next == static_cast<int>(avatarActivity));
-    setAvatarActivity(static_cast<Activity>(next), now);
-  }
-  st.avatar.activity = avatarActivity;
-  if (!avatar::kHasArt) return;
-  const size_t n = static_cast<size_t>(avatar::kW) * avatar::kH;
-  if (!avatarScratch) avatarScratch = static_cast<uint8_t *>(heap_caps_malloc(n, MALLOC_CAP_SPIRAM));
-  if (!avatarPixels) {
-    avatarPixels = static_cast<uint16_t *>(heap_caps_malloc(n * sizeof(uint16_t), MALLOC_CAP_SPIRAM));
-  }
-  if (!avatarScratch || !avatarPixels) return;
-  if (avatar::decodeFrame(avatarActivity, avatarFrame, avatarScratch, avatarPixels)) {
-    st.avatar.pixels = avatarPixels;
-  }
-  avatarFrame = (avatarFrame + 1) % avatar::kFrames;
+  Serial.printf("[UI] home app %s\n", homeApp == HomeApp::Timer ? "timer" : "weather");
 }
 
 int timerRemainingSec() {
@@ -1121,7 +1075,6 @@ void loop() {
   st.timer.remainingSec = timerRemainingSec();
   st.timer.totalSec = timerTotalSec;
   if (page == Page::Level) readLevel(st.level);
-  if (page == Page::Avatar) updateAvatar(st, now);
   followSetup(st);
 
   const unsigned long drawStart = millis();

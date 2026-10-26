@@ -2,15 +2,13 @@
 
 // Pages of the device UI: Home (launcher), Weather (now), Forecast (3 days),
 // Settings, Display (brightness, screen-off time), Sound, Turn off, WiFi, WiFi setup (QR to the board's own network) and
-// Location (QR to the board's web page), plus the home-screen apps (kitchen
-// timer, spirit level, avatar).
+// Location (QR to the board's web page).
 //
 // Pure drawing and hit testing, no Arduino dependencies, so the PC preview
 // (tools/preview.cpp) renders exactly what the device shows. Each page draws
 // a static layer (cached per page) and a dynamic layer (redrawn every frame
 // inside the rectangles returned by dynamicRects()).
 
-#include "Avatar.h"
 #include "Screen.h"
 #include "qrcodegen.h"
 
@@ -27,21 +25,13 @@ enum class Page : uint8_t {
   PowerOff,
   Apps,
   Timer,
-  Level,
-  Avatar
+  Level
 };
-constexpr int kPageCount = 14;
+constexpr int kPageCount = 13;
 
 // The app shown on the home screen next to Settings (Settings -> Apps).
-enum class HomeApp : uint8_t { Weather = 0, Timer = 1, Level = 2, Avatar = 3 };
-constexpr int kHomeAppCount = 4;
-
-// Avatar page: what it is doing and the current frame (decoded by the
-// caller, nullptr while there is no artwork).
-struct AvatarInfo {
-  avatar::Activity activity = avatar::Activity::Wave;
-  const uint16_t *pixels = nullptr; // avatar::kW x avatar::kH, RGB565
-};
+enum class HomeApp : uint8_t { Weather = 0, Timer = 1, Level = 2 };
+constexpr int kHomeAppCount = 3;
 
 // Spirit level reading (degrees, after calibration).
 struct LevelInfo {
@@ -98,7 +88,6 @@ struct UiState {
   HomeApp app = HomeApp::Weather;
   TimerInfo timer;
   LevelInfo level;
-  AvatarInfo avatar;
   int scroll = 0; // Settings list, pixels scrolled down
   ScreenState screen;
   DeviceInfo info;
@@ -208,7 +197,6 @@ inline const char *appName(Lang L, HomeApp a) {
   switch (a) {
   case HomeApp::Timer: return i18n::tr(L, Str::KitchenTimer);
   case HomeApp::Level: return i18n::tr(L, Str::SpiritLevel);
-  case HomeApp::Avatar: return i18n::tr(L, Str::AvatarApp);
   default: return i18n::tr(L, Str::Weather);
   }
 }
@@ -230,43 +218,6 @@ inline void drawLevelTile(Canvas &c, const UiState &st) {
          kText, Align::Center);
 }
 
-// Copy an RGB565 image into the canvas (clipped).
-inline void blit(Canvas &c, int x, int y, int w, int h, const uint16_t *px) {
-  for (int j = 0; j < h; j++) {
-    const int yy = y + j;
-    if (yy < 0 || yy >= c.height()) continue;
-    const int x0 = x < 0 ? -x : 0, x1 = x + w > c.width() ? c.width() - x : w;
-    if (x1 <= x0) continue;
-    memcpy(c.pixels() + yy * c.width() + x + x0, px + j * w + x0, (x1 - x0) * sizeof(uint16_t));
-  }
-}
-
-constexpr Rgb kAvatarTileTop = rgb(0x3A2A1E), kAvatarTileBottom = rgb(0x1E150F);
-
-// Simple round face, used when the private artwork isn't installed.
-inline void avatarPlaceholder(Canvas &c, float cx, float cy, float r) {
-  c.fillCircle(cx, cy, r, rgb(0xE8833F));
-  c.fillCircle(cx, cy + r * 0.28f, r * 0.62f, rgb(0xF6E7D6));
-  c.fillCircle(cx - r * 0.34f, cy - r * 0.12f, r * 0.1f, rgb(0x2A1E1C));
-  c.fillCircle(cx + r * 0.34f, cy - r * 0.12f, r * 0.1f, rgb(0x2A1E1C));
-  c.fillCircle(cx, cy + r * 0.12f, r * 0.09f, rgb(0x2A1E1C));
-}
-
-inline void drawAvatarTile(Canvas &c, const UiState &st) {
-  const Rect &wt = kWeatherTile;
-#if defined(AVATAR_ART)
-  const Rgb bg = rgb(avatar_art::kThumbBg);
-  c.roundRect(wt.x, wt.y, wt.w, wt.h, kTileRadius, bg);
-  blit(c, wt.x + (wt.w - avatar_art::kThumbW) / 2, wt.y + (wt.h - avatar_art::kThumbH) / 2,
-       avatar_art::kThumbW, avatar_art::kThumbH, avatar_art::kThumb);
-#else
-  c.roundRectGradient(wt.x, wt.y, wt.w, wt.h, kTileRadius, kAvatarTileTop, kAvatarTileBottom);
-  avatarPlaceholder(c, wt.x + wt.w / 2.0f, wt.y + wt.h / 2.0f, 44);
-#endif
-  c.text(kFontBody, wt.x + wt.w / 2, kTileLabelBaseline, i18n::tr(st.screen.lang, Str::AvatarApp),
-         kText, Align::Center);
-}
-
 inline void drawHomeStatic(Canvas &c, const UiState &st) {
   const ScreenState &s = st.screen;
   c.clear(kBackground);
@@ -275,7 +226,6 @@ inline void drawHomeStatic(Canvas &c, const UiState &st) {
 
   if (st.app == HomeApp::Timer) drawTimerTile(c, st);
   else if (st.app == HomeApp::Level) drawLevelTile(c, st);
-  else if (st.app == HomeApp::Avatar) drawAvatarTile(c, st);
   else drawWeatherTile(c, st);
 
   // Settings tile.
@@ -1045,41 +995,6 @@ inline bool tapsZero(const UiState &st, int x, int y) {
 }
 
 // ---------------------------------------------------------------------------
-// Avatar
-// ---------------------------------------------------------------------------
-constexpr Rect kAvatarRect{avatar::kX, avatar::kY, avatar::kW, avatar::kH};
-constexpr int kAvatarCaptionY = 412;
-
-inline Str activityName(avatar::Activity a) {
-  switch (a) {
-  case avatar::Activity::Listen: return Str::AvListen;
-  case avatar::Activity::Dance: return Str::AvDance;
-  case avatar::Activity::Rest: return Str::AvRest;
-  case avatar::Activity::Type: return Str::AvType;
-  case avatar::Activity::Sleep: return Str::AvSleep;
-  default: return Str::AvWave;
-  }
-}
-
-inline void drawAvatarStatic(Canvas &c, const UiState &st) {
-  const Lang L = st.screen.lang;
-  c.clear(kBackground);
-  drawTitleBar(c, st.screen, i18n::tr(L, Str::AvatarApp));
-  if (!avatar::kHasArt) {
-    avatarPlaceholder(c, W / 2.0f, kAvatarRect.y + kAvatarRect.h / 2.0f, 90);
-  }
-  // Pill with what it's doing.
-  const char *what = i18n::tr(L, activityName(st.avatar.activity));
-  const int tw = c.textWidth(kFontSmall, what) + 36;
-  c.roundRect(W / 2 - tw / 2, kAvatarCaptionY, tw, 30, 15, rgb(0x1E2436));
-  c.text(kFontSmall, W / 2, kAvatarCaptionY + 21, what, rgb(0xC8CEE1), Align::Center);
-}
-
-inline void drawAvatarDynamic(Canvas &c, const UiState &st) {
-  if (st.avatar.pixels) blit(c, kAvatarRect.x, kAvatarRect.y, kAvatarRect.w, kAvatarRect.h, st.avatar.pixels);
-}
-
-// ---------------------------------------------------------------------------
 // Page dispatch
 // ---------------------------------------------------------------------------
 inline void drawStatic(Canvas &c, const UiState &st) {
@@ -1097,7 +1012,6 @@ inline void drawStatic(Canvas &c, const UiState &st) {
   case Page::Apps: drawAppsStatic(c, st); break;
   case Page::Timer: drawTimerStatic(c, st); break;
   case Page::Level: drawLevelStatic(c, st); break;
-  case Page::Avatar: drawAvatarStatic(c, st); break;
   }
 }
 
@@ -1138,10 +1052,6 @@ inline int dynamicRects(const Canvas &c, const UiState &st, Rect out[4]) {
                            : kLevelDialRect;
     out[1] = kLevelReadoutRect;
     return 2;
-  case Page::Avatar:
-    if (!st.avatar.pixels) return 0;
-    out[0] = kAvatarRect;
-    return 1;
   default:
     return 0;
   }
@@ -1160,7 +1070,6 @@ inline void drawDynamic(Canvas &c, const UiState &st) {
     }
     break;
   case Page::Level: drawLevelDynamic(c, st); break;
-  case Page::Avatar: drawAvatarDynamic(c, st); break;
   default: break;
   }
 }
@@ -1231,9 +1140,6 @@ inline uint32_t staticKey(const UiState &st) {
     h.add(st.level.sensor); h.add(st.level.edge); h.add(st.level.vertical);
     h.add(st.level.calibrated);
     break;
-  case Page::Avatar:
-    h.add(st.avatar.activity);
-    break;
   case Page::Settings:
     h.str(d.ssid); h.str(d.ip); h.add(d.brightnessPercent); h.add(d.volumePercent);
     h.add(st.app);
@@ -1281,9 +1187,6 @@ inline uint32_t dynamicKey(const UiState &st, uint32_t frameNo) {
     h.add(static_cast<int>(roundf(l.angle * 20)));
     return h.h;
   }
-  case Page::Avatar:
-    h.add(st.avatar.pixels != nullptr); h.add(frameNo);
-    return h.h;
   case Page::Home:
   case Page::Weather: {
     h.add(s.second % 2); h.add(s.timeValid);
@@ -1333,7 +1236,6 @@ inline Page onTap(const UiState &st, int x, int y) {
     if (inside(kWeatherTile, x, y, kTouchMargin)) {
       return st.app == HomeApp::Timer ? Page::Timer
              : st.app == HomeApp::Level ? Page::Level
-             : st.app == HomeApp::Avatar ? Page::Avatar
                                         : Page::Weather;
     }
     if (inside(kSettingsTile, x, y, kTouchMargin)) return Page::Settings;

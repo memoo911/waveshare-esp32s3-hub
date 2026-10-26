@@ -1,9 +1,6 @@
 # WiFi credentials (copy src/credentials.h.example to src/credentials.h)
 src/credentials.h
 
-# Private avatar artwork (generated, never committed; see src/Avatar.h)
-src/AvatarArt.h
-
 # PlatformIO
 .pio/
 .vscode/.browse.c_cpp.db*

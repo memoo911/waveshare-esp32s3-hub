@@ -30,8 +30,8 @@ PlatformIO · CST820 touch · AXP2101 · QMI8658 · ES8311*
   and volume sliders, screen-off time, night dimming, hourly chime, language,
   turn off
 - **Apps** for the home screen (**Settings → Apps**): **Kitchen timer** (big
-  countdown, rings like an old wind-up kitchen timer), **Spirit level** (bubble level using
-  the motion sensor) and **Avatar** (an animated character, artwork not included)
+  countdown, rings like an old wind-up kitchen timer) and **Spirit level** (bubble level using
+  the motion sensor)
 - **Sound**: optional hourly chime (off by default, silent at night)
 - **Languages**: English (default) and Croatian (Hrvatski) for now, on the
   board and on the phone pages
@@ -133,7 +133,7 @@ The list scrolls: drag it up to see the rows at the bottom.
 | **Location** | Place for the forecast, chosen on your phone |
 | **Display** | Brightness, when the screen turns off, night dimming |
 | **Sound** | Volume, hourly chime |
-| **Apps** | Choose the app on the home screen: Weather, Kitchen timer, Spirit level or Avatar |
+| **Apps** | Choose the app on the home screen: Weather, Kitchen timer or Spirit level |
 | **Language** | English / Croatian, tap to switch |
 | **Turn off** | Switch the board off (press **PWR** to turn it on) |
 
@@ -246,7 +246,7 @@ seconds also turns it off.
 ![Apps and kitchen timer](docs/timer.png)
 
 **Settings → Apps** chooses the app that sits on the home screen next to
-Settings: **Weather** (default), **Kitchen timer**, **Spirit level** or **Avatar**. Tap one; the green dot
+Settings: **Weather** (default), **Kitchen timer** or **Spirit level**. Tap one; the green dot
 shows the chosen app. To get the weather back, choose Weather again. More
 apps will follow.
 
@@ -281,26 +281,15 @@ off. While the countdown is on screen, the screen stays on.
 If the bubble moves the wrong way, flip or swap the axes with
 `LEVEL_FLIP_X`, `LEVEL_FLIP_Y` and `LEVEL_SWAP_XY` in `src/Config.h`.
 
-**Avatar** (tap its tile on the home screen): a small animated character that
-does something different every 45 seconds (waves, listens to music, dances,
-rests, types on a laptop) and sleeps at night (22:00-07:00). The label under
-it says what it is doing. The screen turns off as usual.
-
-The character's artwork is private and **not part of this repository**. The
-app looks for `src/AvatarArt.h` (listed in `.gitignore`); without it, the
-tile and the page show a simple placeholder face. `src/Avatar.h` describes
-the format if you want to make your own (per activity: a 256-colour palette
-and 16 frames of palette indices, each compressed with raw deflate).
-
 ## Everyday use
 
 | Action | What it does |
 |---|---|
-| Tap a tile on the home screen | Opens the chosen app (Weather, Kitchen timer, Spirit level or Avatar) or Settings |
+| Tap a tile on the home screen | Opens the chosen app (Weather, Kitchen timer or Spirit level) or Settings |
 | Swipe **left** on the weather screen | 3-day forecast |
 | Swipe **right**, or tap **‹** at the top left | Back |
 | **Settings → Display** | Drag the brightness slider; tap **Screen off after** to choose when the screen turns off; tap **Night dimming** to switch the dimmer night screen (22:00 to 07:00) on or off |
-| **Settings → Apps** | Weather, Kitchen timer, Spirit level or Avatar on the home screen |
+| **Settings → Apps** | Weather, Kitchen timer or Spirit level on the home screen |
 | **Settings → Sound** | Drag the volume slider (a short note plays when you let go); tap below it to switch the hourly chime on or off |
 | **BOOT** button | Refresh the weather now ("Refreshing…" shows at the top); wakes the screen when it's off; stops the timer alarm |
 | Touch the dark screen, or pick the board up | Wakes it |
