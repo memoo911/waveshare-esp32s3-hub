@@ -20,8 +20,12 @@ void playChime();
 // One short soft note (volume preview).
 void playBlip();
 
-// Kitchen timer alarm: three quick beeps, at least half volume.
+// Kitchen timer alarm: an old wind-up bell ringing for 2 s, at least half
+// volume.
 void playAlarm();
+
+// Cuts the sound that is playing short (the alarm when the timer is stopped).
+void stop();
 
 // True from play*() until the sound has finished.
 bool busy();

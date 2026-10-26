@@ -320,6 +320,7 @@ void timerAction(ui::TimerAction a, int preset) {
     break;
   case TimerAction::Stop:
     timerState = TimerState::Idle;
+    audio::stop();
     Serial.println("[Timer] stop");
     break;
   case TimerAction::None: break;
@@ -423,7 +424,7 @@ void updateTimer() {
       timerState = TimerState::Idle;
     } else if (static_cast<long>(now - nextBeepMs) >= 0) {
       audio::playAlarm();
-      nextBeepMs += 1000;
+      nextBeepMs += TIMER_RING_EVERY_MS;
     }
   }
 }

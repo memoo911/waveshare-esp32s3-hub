@@ -67,8 +67,10 @@ constexpr bool LEVEL_SWAP_XY = true;
 constexpr bool LEVEL_FLIP_X = true;
 constexpr bool LEVEL_FLIP_Y = false;
 
-// Kitchen timer: how long the alarm beeps (once a second) when time is up.
+// Kitchen timer: when time is up, an old wind-up bell rings for 2 s every
+// TIMER_RING_EVERY_MS, for TIMER_RING_MS in total (4 rings).
 constexpr unsigned long TIMER_RING_MS = 10UL * 1000UL;
+constexpr unsigned long TIMER_RING_EVERY_MS = 2500;
 
 // ============= Battery care =============
 // On USB, charging pauses at BATTERY_FULL_PERCENT and resumes only once the

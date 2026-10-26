@@ -23,6 +23,7 @@ volatile int volume = 60;
 es8311_handle_t codec = nullptr;
 bool ready = false;
 volatile bool playing = false;
+volatile bool abortSound = false;
 
 struct I2cGuard {
   I2cGuard() { if (i2c) xSemaphoreTake(i2c, portMAX_DELAY); }
@@ -120,6 +121,44 @@ void render(const Note *notes, int count, float total) {
   }
 }
 
+// Old wind-up kitchen timer bell: a small hammer strikes the bell about 22
+// times a second for ~2 s. Each strike adds to a ringing envelope that decays
+// between strikes; the bell has inharmonic partials like a real metal dome.
+void renderBell(float total) {
+  static int16_t buf[kChunk * 2];
+  const float f1 = 2398.0f;
+  const float strikeHz = 22.0f;
+  const float ringStop = total - 0.25f; // hammer stops, bell rings out
+  const float decayPerSample = expf(-1.0f / (0.05f * kRate));
+  const int frames = static_cast<int>(total * kRate);
+  float env = 0;
+  int nextStrike = 0;
+  int strikeCount = 0;
+  for (int f0 = 0; f0 < frames && !abortSound; f0 += kChunk) {
+    const int n = min(kChunk, frames - f0);
+    for (int i = 0; i < n; i++) {
+      const int f = f0 + i;
+      const float t = static_cast<float>(f) / kRate;
+      if (f >= nextStrike && t < ringStop) {
+        // Strikes alternate slightly in strength, like a real clapper.
+        env += (strikeCount++ & 1) ? 0.30f : 0.40f;
+        if (env > 1.2f) env = 1.2f;
+        nextStrike += static_cast<int>(kRate / strikeHz);
+      }
+      env *= decayPerSample;
+      const float w = 2 * PI * f1 * t;
+      const float s = env * (sinf(w) + 0.6f * sinf(2.321f * w) + 0.12f * sinf(3.2f * w) +
+                             0.13f * sinf(4.257f * w));
+      const float fade = min(1.0f, (total - t) / 0.03f);
+      const int16_t v = static_cast<int16_t>(constrain(s * 0.4f * fade, -1.0f, 1.0f) * 32767);
+      buf[i * 2] = v;
+      buf[i * 2 + 1] = v;
+    }
+    size_t written = 0;
+    i2s_write(kPort, buf, n * 4, &written, portMAX_DELAY);
+  }
+}
+
 void play(uint32_t sound) {
   const int v = sound == kAlarm ? max(static_cast<int>(volume), kAlarmMinVolume) : volume;
   if (v <= 0) return;
@@ -133,11 +172,7 @@ void play(uint32_t sound) {
     const Note notes[] = {{1318.5f, 0.0f, 1.2f, 0.45f}, {1046.5f, 0.45f, 1.6f, 0.6f}};
     render(notes, 2, 2.1f);
   } else if (sound == kAlarm) {
-    // Three quick bright beeps.
-    const Note notes[] = {{2093.0f, 0.0f, 0.12f, 0.2f},
-                          {2093.0f, 0.18f, 0.12f, 0.2f},
-                          {2093.0f, 0.36f, 0.12f, 0.2f}};
-    render(notes, 3, 0.5f);
+    renderBell(2.0f);
   } else {
     const Note notes[] = {{1046.5f, 0.0f, 0.25f, 0.08f}};
     render(notes, 1, 0.3f);
@@ -152,6 +187,7 @@ void audioTask(void *) {
   for (;;) {
     uint32_t sound = kNone;
     xTaskNotifyWait(0, UINT32_MAX, &sound, portMAX_DELAY);
+    abortSound = false;
     if (sound != kNone) play(sound);
     playing = false;
   }
@@ -185,6 +221,8 @@ void playAlarm() {
   playing = true;
   xTaskNotify(task, kAlarm, eSetValueWithOverwrite);
 }
+
+void stop() { abortSound = true; }
 
 bool busy() { return playing; }
 

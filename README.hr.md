@@ -31,7 +31,7 @@ Sustav je zadano na engleskom; u postavkama se prebacuje na hrvatski (vidi
   glasnoću, vrijeme gašenja ekrana, noćno zatamnjenje, zvono svaki sat, jezik,
   isključivanje
 - **Aplikacije** za početni ekran (**Postavke → Aplikacije**): **Kuhinjski
-  tajmer** (veliko odbrojavanje, pišti kad istekne) i **Libela** (libela s
+  tajmer** (veliko odbrojavanje, zvoni kao stari mehanički tajmer) i **Libela** (libela s
   mjehurićem preko senzora pokreta)
 - **Zvuk**: zvono svaki sat po želji (zadano isključeno, noću tiho)
 - **Jezici**: engleski (zadano) i hrvatski, na satu i na stranicama na mobitelu
@@ -253,7 +253,8 @@ Stići će još aplikacija.
 2. Dodirni **Kreni**. Krug odbrojava, a pločica na početnom ekranu pokazuje
    preostalo vrijeme.
 3. **Pauza** / **Nastavi**, ili **Poništi** za prekid.
-4. Na **0:00** ekran se upali i ploča pišti svake sekunde **10 sekundi**,
+4. Na **0:00** ekran se upali i ploča zvoni kao staro zvonce kuhinjskog
+   tajmera **10 sekundi**,
    barem upola glasno (i kad je glasnoća 0 %) i noću. Dodir bilo gdje ili
    tipka **BOOT** ranije ga zaustavlja.
 

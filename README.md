@@ -30,7 +30,7 @@ PlatformIO · CST820 touch · AXP2101 · QMI8658 · ES8311*
   and volume sliders, screen-off time, night dimming, hourly chime, language,
   turn off
 - **Apps** for the home screen (**Settings → Apps**): **Kitchen timer** (big
-  countdown, beeps when time is up) and **Spirit level** (bubble level using
+  countdown, rings like an old wind-up kitchen timer) and **Spirit level** (bubble level using
   the motion sensor)
 - **Sound**: optional hourly chime (off by default, silent at night)
 - **Languages**: English (default) and Croatian (Hrvatski) for now, on the
@@ -256,8 +256,8 @@ apps will follow.
    **3 / 5 / 8 / 10 min**. The last time you used is remembered.
 2. Tap **Start**. A ring counts down; the home tile shows the time left.
 3. **Pause** / **Resume**, or **Reset** to cancel.
-4. At **0:00** the screen turns on and the board beeps once a second for
-   **10 seconds**, at least at half volume (even if the volume is at 0 %) and
+4. At **0:00** the screen turns on and the board rings like an old wind-up
+   kitchen timer bell for **10 seconds**, at least at half volume (even if the volume is at 0 %) and
    also at night. Tap anywhere, or press **BOOT**, to stop it sooner.
 
 The countdown keeps running when you go to other pages or the screen turns
