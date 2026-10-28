@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="860" height="250" viewBox="0 0 860 250" font-family="Inter, Segoe UI, Arial, sans-serif">
+  <rect width="860" height="250" rx="16" fill="#ffffff"/>
+  <defs>
+    <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#6b6f80"/></marker>
+  </defs>
+  <!-- clock -->
+  <rect x="24" y="52" width="210" height="130" rx="18" fill="#15122e"/>
+  <text x="129" y="88" text-anchor="middle" font-size="18" font-weight="600" fill="#ffffff">Clock</text>
+  <text x="129" y="116" text-anchor="middle" font-size="13" fill="#b8bed0">hold BOOT, ask out loud</text>
+  <text x="129" y="136" text-anchor="middle" font-size="13" fill="#b8bed0">answer shown as text</text>
+  <text x="129" y="164" text-anchor="middle" font-size="12" fill="#9b8cff">credentials.h</text>
+  <!-- worker -->
+  <rect x="325" y="52" width="210" height="130" rx="18" fill="#f6821f"/>
+  <text x="430" y="88" text-anchor="middle" font-size="18" font-weight="600" fill="#ffffff">Cloudflare Worker</text>
+  <text x="430" y="116" text-anchor="middle" font-size="13" fill="#fff4ea">your own, free</text>
+  <text x="430" y="136" text-anchor="middle" font-size="13" fill="#fff4ea">checks the device key</text>
+  <text x="430" y="164" text-anchor="middle" font-size="12" fill="#ffffff">GEMINI_API_KEY · DEVICE_TOKEN</text>
+  <!-- gemini -->
+  <rect x="626" y="52" width="210" height="130" rx="18" fill="#1a73e8"/>
+  <text x="731" y="88" text-anchor="middle" font-size="18" font-weight="600" fill="#ffffff">Google Gemini</text>
+  <text x="731" y="116" text-anchor="middle" font-size="13" fill="#e3edff">understands the question</text>
+  <text x="731" y="136" text-anchor="middle" font-size="13" fill="#e3edff">writes a short answer</text>
+  <text x="731" y="164" text-anchor="middle" font-size="12" fill="#ffffff">+ Google Search</text>
+  <!-- arrows -->
+  <line x1="238" y1="92" x2="320" y2="92" stroke="#6b6f80" stroke-width="2" marker-end="url(#a)"/>
+  <line x1="320" y1="142" x2="238" y2="142" stroke="#6b6f80" stroke-width="2" marker-end="url(#a)"/>
+  <line x1="539" y1="92" x2="621" y2="92" stroke="#6b6f80" stroke-width="2" marker-end="url(#a)"/>
+  <line x1="621" y1="142" x2="539" y2="142" stroke="#6b6f80" stroke-width="2" marker-end="url(#a)"/>
+  <text x="279" y="40" text-anchor="middle" font-size="12" fill="#3c4043">recording + device key</text>
+  <text x="279" y="206" text-anchor="middle" font-size="12" fill="#3c4043">answer</text>
+  <text x="580" y="40" text-anchor="middle" font-size="12" fill="#3c4043">audio + conversation</text>
+  <text x="580" y="206" text-anchor="middle" font-size="12" fill="#3c4043">answer</text>
+  <text x="430" y="236" text-anchor="middle" font-size="12" fill="#6b6f80">Your Gemini key never leaves Cloudflare. The clock only knows the Worker address and the device key.</text>
+</svg>

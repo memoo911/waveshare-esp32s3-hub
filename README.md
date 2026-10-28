@@ -27,14 +27,18 @@ PlatformIO · CST820 touch · AXP2101 · QMI8658 · ES8311*
 - **Animated icons**: rain falls, snow drifts, the sun turns, lightning
   flashes; at night the moon shows its real phase
 - **3-day forecast**: swipe left on the weather screen
+- **AI Assistant**: hold the top button, ask out loud, read the answer on the
+  screen. Answers in your language and searches Google for current things
+  (Gemini through your own free Cloudflare Worker; your keys stay on your
+  computer and in Cloudflare, never in git). Setup:
+  [step-by-step guide](docs/AI-ASSISTANT.md)
 - **Touch screen**: home screen with app tiles, swipe right to go back
 - **Settings**: WiFi and location from your phone via QR code, brightness
   and volume sliders, screen-off time, night dimming, hourly chime, language,
   turn off
-- **Apps** for the home screen (**Settings → Apps**): **Kitchen timer** (big
-  countdown, rings like an old wind-up kitchen timer), **Spirit level** (bubble level using
-  the motion sensor) and **AI Assistant** (hold a button, ask out loud, read the
-  answer; Gemini with Google Search, through your own free Cloudflare Worker)
+- **More apps** for the home screen (**Settings → Apps**): **Kitchen timer**
+  (big countdown, rings like an old wind-up kitchen timer) and **Spirit level**
+  (bubble level using the motion sensor)
 - **Sound**: optional hourly chime (off by default, silent at night)
 - **Languages**: English (default) and Croatian (Hrvatski) for now, on the
   board and on the phone pages
@@ -253,6 +257,55 @@ Settings: **Weather** (default), **Kitchen timer**, **Spirit level** or **AI Ass
 shows the chosen app. To get the weather back, choose Weather again. More
 apps will follow.
 
+### AI Assistant
+
+![AI Assistant](docs/assistant.png)
+
+**AI Assistant** (tap its tile on the home screen; set it up first, see the
+[step-by-step guide](docs/AI-ASSISTANT.md)):
+
+1. Hold the **BOOT** button (the top one) and ask your question. The
+   microphone lights up and a timer runs, up to **15 seconds**.
+2. Let go of BOOT. "Thinking…" shows for a few seconds, then the answer appears
+   as text. Long answers switch to a smaller font.
+3. Hold BOOT again for the next question. The old answer is replaced, but it's
+   still the same conversation, so follow-ups like "and how tall is it?" work.
+4. **New conversation** at the bottom starts over. Leaving the page does the
+   same.
+
+It answers in the language you ask in, in a few short sentences, and
+searches Google by itself when a question needs current information (match
+dates, news, opening hours, prices). The screen
+stays on while it listens and thinks. On this page BOOT is for questions; on
+the other pages it still refreshes the weather.
+
+#### Setting up the AI Assistant
+
+The full **step-by-step guide** is in
+**[docs/AI-ASSISTANT.md](docs/AI-ASSISTANT.md)**: Node.js, the Gemini API key,
+the Cloudflare account, putting the Worker online and finding its address,
+making the device key, storing the keys as Worker secrets, filling in
+`credentials.h`, uploading and trying it out, plus troubleshooting.
+
+In short:
+
+1. Create a **Gemini API key** in [Google AI Studio](https://aistudio.google.com/apikey).
+2. In the `worker` folder: `npx wrangler login`, then `npx wrangler deploy`
+   (prints `https://clock-assistant.<your-subdomain>.workers.dev`).
+3. Make a **device key** (a long random password) and store both keys in the
+   Worker: `npx wrangler secret put DEVICE_TOKEN` and
+   `npx wrangler secret put GEMINI_API_KEY`.
+4. In your local `src/credentials.h` fill in `ASSISTANT_URL` (the address
+   with `/ask`) and `ASSISTANT_TOKEN` (the device key), then upload.
+
+> [!IMPORTANT]
+> Your keys never go on GitHub: the Gemini key lives only in Cloudflare, the
+> Worker address and device key only in `src/credentials.h`, which git
+> ignores. Save the device key somewhere private: the Worker and the clock
+> need the same one.
+
+### Kitchen timer
+
 **Kitchen timer** (tap its tile on the home screen):
 
 1. Set the time with **−** and **+** (one minute per tap, up to 99) or tap
@@ -265,6 +318,8 @@ apps will follow.
 
 The countdown keeps running when you go to other pages or the screen turns
 off. While the countdown is on screen, the screen stays on.
+
+### Spirit level
 
 **Spirit level** (tap its tile on the home screen):
 
@@ -283,94 +338,6 @@ off. While the countdown is on screen, the screen stays on.
 
 If the bubble moves the wrong way, flip or swap the axes with
 `LEVEL_FLIP_X`, `LEVEL_FLIP_Y` and `LEVEL_SWAP_XY` in `src/Config.h`.
-
-**AI Assistant** (tap its tile on the home screen; set it up first, see
-[Setting up the Assistant](#setting-up-the-assistant)):
-
-1. Hold the **BOOT** button (the top one) and ask your question. The
-   microphone lights up and a timer runs, up to **15 seconds**.
-2. Let go of BOOT. "Thinking…" shows for a few seconds, then the answer appears
-   as text. Long answers switch to a smaller font.
-3. Hold BOOT again for the next question. The old answer is replaced, but it's
-   still the same conversation, so follow-ups like "and how tall is it?" work.
-4. **New conversation** at the bottom starts over. Leaving the page does the
-   same.
-
-It answers in the language you ask in, in a few short sentences, and
-searches Google by itself when a question needs current information (match
-dates, news, opening hours, prices). The screen
-stays on while it listens and thinks. On this page BOOT is for questions; on
-the other pages it still refreshes the weather.
-
-### Setting up the Assistant
-
-The clock sends your recorded question to **your own** small server, a free
-Cloudflare Worker, which asks Google's Gemini and sends back the answer. Your
-Gemini API key stays in the Worker; the clock only knows the Worker's address
-and a device key. Nothing of this is in the repository: you add it locally.
-
-You need: a Google account, a free Cloudflare account and
-[Node.js](https://nodejs.org) (the LTS version) on your computer.
-
-**1. Gemini API key**
-
-1. Open [Google AI Studio → API keys](https://aistudio.google.com/apikey) and
-   sign in.
-2. Click **Create API key**, then copy the key. Keep it private.
-3. Gemini bills per use: very little per question, and questions where it
-   searches Google cost a bit more after a monthly free allowance. Current
-   limits and prices are on the same site under **Billing**.
-
-**2. Put the Worker online**
-
-1. Create a free account at [dash.cloudflare.com/sign-up](https://dash.cloudflare.com/sign-up)
-   and confirm your email.
-2. In VS Code open the terminal (**Terminal → New Terminal**) in the project
-   folder and type:
-   ```
-   cd worker
-   npx wrangler login
-   ```
-   A browser opens: click **Allow**.
-3. Upload the Worker:
-   ```
-   npx wrangler deploy
-   ```
-   The first time it asks you to pick a `workers.dev` subdomain. At the end it
-   prints the address, e.g. `https://clock-assistant.<your-subdomain>.workers.dev`.
-   Write it down.
-4. Store the Gemini key in the Worker (paste it when asked, then Enter):
-   ```
-   npx wrangler secret put GEMINI_API_KEY
-   ```
-5. Make up a device key: a long random password. On Windows (PowerShell):
-   ```
-   [guid]::NewGuid().ToString("N") + [guid]::NewGuid().ToString("N")
-   ```
-   (macOS / Linux: `openssl rand -hex 32`). Copy the result and store it:
-   ```
-   npx wrangler secret put DEVICE_TOKEN
-   ```
-6. Check: open the Worker's address in a browser. It shows
-   `{"ok":true,"service":"clock assistant"}`.
-
-**3. Tell the clock**
-
-1. If you don't have `src/credentials.h` yet, copy
-   `src/credentials.h.example` to `src/credentials.h`.
-2. Fill in the two lines (address **with `/ask` at the end**, and the same
-   device key as in step 2.5):
-   ```cpp
-   #define ASSISTANT_URL "https://clock-assistant.<your-subdomain>.workers.dev/ask"
-   #define ASSISTANT_TOKEN "<your device key>"
-   ```
-3. Upload to the board, then **Settings → Apps → AI Assistant**.
-
-`credentials.h` is in `.gitignore`, so the address and key never end up on
-GitHub. To change how it answers (length, tone) or the Gemini model, edit
-`worker/src/index.js` or `worker/wrangler.toml` and run `npx wrangler deploy`
-again; the clock doesn't need a new upload. `npx wrangler tail` shows the
-Worker's log live.
 
 ## Everyday use
 

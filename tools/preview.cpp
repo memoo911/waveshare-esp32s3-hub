@@ -151,6 +151,7 @@ int main(int argc, char **argv) {
       {"home_assistant_en", Page::Home, 3, true, 12.6f, 0.3f, 17, Lang::En},
       {"assistant_ready_en", Page::Assistant, 3, true, 12.6f, 0.3f, 17, Lang::En},
       {"assistant_answer_en", Page::Assistant, 3, true, 12.6f, 0.3f, 17, Lang::En},
+      {"assistant_listening_en", Page::Assistant, 3, true, 12.6f, 0.3f, 17, Lang::En},
   };
   for (const Case &cs : cases) {
     UiState st = makeState(cs.page, cs.code, cs.day, cs.temp, cs.phase, cs.hour, cs.lang);
@@ -193,7 +194,7 @@ int main(int argc, char **argv) {
     if (name.rfind("home_assistant", 0) == 0) st.app = HomeApp::Assistant;
     if (name.rfind("assistant", 0) == 0) {
       AssistantInfo &ai = st.assistant;
-      if (name == "assistant_listening") {
+      if (name.rfind("assistant_listening", 0) == 0) {
         ai.phase = AssistantPhase::Listening; ai.recordMs = 4200; ai.level = 0.8f;
       }
       if (name == "assistant_thinking") { ai.phase = AssistantPhase::Thinking; ai.turns = 1; }

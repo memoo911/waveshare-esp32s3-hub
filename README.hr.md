@@ -28,15 +28,18 @@ Sustav je zadano na engleskom; u postavkama se prebacuje na hrvatski (vidi
 - **Animirane ikone**: kiša pada, snijeg lebdi, sunce se okreće, munje
   bljeskaju; noću Mjesec pokazuje stvarnu mijenu
 - **Prognoza za 3 dana**: povuci ulijevo na ekranu s vremenom
+- **AI Assistant**: drži gornju tipku, pitaj naglas, pročitaj odgovor na
+  ekranu. Odgovara na tvom jeziku i pretražuje Google za svježe podatke
+  (Gemini preko tvog besplatnog Cloudflare Workera; ključevi ostaju na tvom
+  računalu i u Cloudflareu, nikad u gitu). Postavljanje:
+  [upute korak po korak](docs/AI-ASSISTANT.hr.md)
 - **Ekran na dodir**: početni ekran s pločicama, povlačenje udesno = natrag
 - **Postavke**: WiFi i mjesto s mobitela preko QR koda, klizači za svjetlinu i
   glasnoću, vrijeme gašenja ekrana, noćno zatamnjenje, zvono svaki sat, jezik,
   isključivanje
-- **Aplikacije** za početni ekran (**Postavke → Aplikacije**): **Kuhinjski
-  tajmer** (veliko odbrojavanje, zvoni kao stari mehanički tajmer), **Libela** (libela s
-  mjehurićem preko senzora pokreta) i **AI Assistant** (držiš tipku, pitaš naglas,
-  čitaš odgovor; Gemini s Google pretraživanjem, preko tvog besplatnog
-  Cloudflare Workera)
+- **Još aplikacija** za početni ekran (**Postavke → Aplikacije**): **Kuhinjski
+  tajmer** (veliko odbrojavanje, zvoni kao stari mehanički tajmer) i **Libela**
+  (libela s mjehurićem preko senzora pokreta)
 - **Zvuk**: zvono svaki sat po želji (zadano isključeno, noću tiho)
 - **Jezici**: engleski (zadano) i hrvatski, na satu i na stranicama na mobitelu
 - **Baterija**: postotak i oznaka punjenja; tamniji ekran noću (može se
@@ -250,6 +253,54 @@ Postavke: **Vrijeme** (zadano), **Kuhinjski tajmer**, **Libela** ili **AI Assist
 zelena točka pokazuje odabranu. Za povratak prognoze ponovno odaberi Vrijeme.
 Stići će još aplikacija.
 
+### AI Assistant
+
+![AI Assistant](docs/assistant.png)
+
+**AI Assistant** (dodirni njegovu pločicu na početnom ekranu; prvo ga postavi,
+vidi [upute korak po korak](docs/AI-ASSISTANT.hr.md)):
+
+1. Drži tipku **BOOT** (gornju) i postavi pitanje. Mikrofon zasvijetli i
+   teče vrijeme, najviše **15 sekundi**.
+2. Pusti BOOT. Nekoliko sekundi piše "Razmišljam…", a onda se pojavi odgovor
+   kao tekst. Dugi odgovori prelaze na manja slova.
+3. Za sljedeće pitanje opet drži BOOT. Stari odgovor se zamijeni, ali razgovor
+   je i dalje isti, pa radi i nastavak tipa "a koliko je visok?".
+4. **Novi razgovor** pri dnu kreće ispočetka. Isto vrijedi i kad izađeš sa
+   stranice.
+
+Odgovara na jeziku na kojem pitaš, u nekoliko kratkih rečenica, a kad pitanje
+traži svježe podatke (utakmice, vijesti, radno vrijeme, cijene) sam pretraži
+Google. Dok sluša i
+razmišlja ekran se ne gasi. Na ovoj stranici BOOT služi za pitanja, na
+ostalima i dalje osvježava prognozu.
+
+#### Postavljanje AI Assistanta
+
+Potpune **upute korak po korak** su u
+**[docs/AI-ASSISTANT.hr.md](docs/AI-ASSISTANT.hr.md)**: Node.js, Gemini API
+ključ, Cloudflare račun, postavljanje Workera i gdje pronaći njegovu adresu,
+ključ uređaja, spremanje ključeva kao tajni u Workeru, upis u
+`credentials.h`, upload i isprobavanje, te rješavanje problema.
+
+Ukratko:
+
+1. Napravi **Gemini API ključ** u [Google AI Studiju](https://aistudio.google.com/apikey).
+2. U mapi `worker`: `npx wrangler login`, pa `npx wrangler deploy` (ispiše
+   `https://clock-assistant.<tvoja-poddomena>.workers.dev`).
+3. Napravi **ključ uređaja** (dugu nasumičnu lozinku) i spremi oba ključa u
+   Worker: `npx wrangler secret put DEVICE_TOKEN` i
+   `npx wrangler secret put GEMINI_API_KEY`.
+4. U svom lokalnom `src/credentials.h` popuni `ASSISTANT_URL` (adresa s
+   `/ask`) i `ASSISTANT_TOKEN` (ključ uređaja), pa upload.
+
+> [!IMPORTANT]
+> Tvoji ključevi nikad ne idu na GitHub: Gemini ključ je samo u Cloudflareu,
+> adresa Workera i ključ uređaja samo u `src/credentials.h`, koji git
+> ignorira. Ključ uređaja spremi negdje privatno: Worker i sat trebaju isti.
+
+### Kuhinjski tajmer
+
 **Kuhinjski tajmer** (dodirni njegovu pločicu na početnom ekranu):
 
 1. Postavi vrijeme s **−** i **+** (minuta po dodiru, do 99) ili dodirni
@@ -264,6 +315,8 @@ Stići će još aplikacija.
 
 Odbrojavanje radi i kad odeš na druge stranice ili se ekran ugasi. Dok je
 odbrojavanje na ekranu, ekran se ne gasi.
+
+### Libela
 
 **Libela** (dodirni njezinu pločicu na početnom ekranu):
 
@@ -281,94 +334,6 @@ odbrojavanje na ekranu, ekran se ne gasi.
 
 Ako se mjehurić miče na krivu stranu, okreni ili zamijeni osi s
 `LEVEL_FLIP_X`, `LEVEL_FLIP_Y` i `LEVEL_SWAP_XY` u `src/Config.h`.
-
-**AI Assistant** (dodirni njegovu pločicu na početnom ekranu; prvo ga postavi,
-vidi [Postavljanje Asistenta](#postavljanje-asistenta)):
-
-1. Drži tipku **BOOT** (gornju) i postavi pitanje. Mikrofon zasvijetli i
-   teče vrijeme, najviše **15 sekundi**.
-2. Pusti BOOT. Nekoliko sekundi piše "Razmišljam…", a onda se pojavi odgovor
-   kao tekst. Dugi odgovori prelaze na manja slova.
-3. Za sljedeće pitanje opet drži BOOT. Stari odgovor se zamijeni, ali razgovor
-   je i dalje isti, pa radi i nastavak tipa "a koliko je visok?".
-4. **Novi razgovor** pri dnu kreće ispočetka. Isto vrijedi i kad izađeš sa
-   stranice.
-
-Odgovara na jeziku na kojem pitaš, u nekoliko kratkih rečenica, a kad pitanje
-traži svježe podatke (utakmice, vijesti, radno vrijeme, cijene) sam pretraži
-Google. Dok sluša i
-razmišlja ekran se ne gasi. Na ovoj stranici BOOT služi za pitanja, na
-ostalima i dalje osvježava prognozu.
-
-### Postavljanje Asistenta
-
-Sat šalje snimljeno pitanje na **tvoj** mali poslužitelj, besplatni
-Cloudflare Worker, koji pita Googleov Gemini i vraća odgovor. Tvoj Gemini API
-ključ ostaje u Workeru; sat zna samo adresu Workera i ključ uređaja. Ništa od
-toga nije u repozitoriju: dodaješ to lokalno.
-
-Treba ti: Google račun, besplatan Cloudflare račun i
-[Node.js](https://nodejs.org) (LTS verzija) na računalu.
-
-**1. Gemini API ključ**
-
-1. Otvori [Google AI Studio → API keys](https://aistudio.google.com/apikey) i
-   prijavi se.
-2. Klikni **Create API key** i kopiraj ključ. Ne dijeli ga ni s kim.
-3. Gemini se plaća po korištenju: vrlo malo po pitanju, a pitanja za koja
-   pretražuje Google koštaju malo više nakon mjesečnog besplatnog dijela.
-   Trenutna ograničenja i cijene su na istoj stranici pod **Billing**.
-
-**2. Postavi Worker na internet**
-
-1. Napravi besplatan račun na [dash.cloudflare.com/sign-up](https://dash.cloudflare.com/sign-up)
-   i potvrdi email.
-2. U VS Codeu otvori terminal (**Terminal → New Terminal**) u mapi projekta i
-   upiši:
-   ```
-   cd worker
-   npx wrangler login
-   ```
-   Otvori se preglednik: klikni **Allow**.
-3. Prebaci Worker:
-   ```
-   npx wrangler deploy
-   ```
-   Prvi put te pita da odabereš `workers.dev` poddomenu. Na kraju ispiše
-   adresu, npr. `https://clock-assistant.<tvoja-poddomena>.workers.dev`.
-   Zapiši je.
-4. Spremi Gemini ključ u Worker (zalijepi ga kad pita, pa Enter):
-   ```
-   npx wrangler secret put GEMINI_API_KEY
-   ```
-5. Smisli ključ uređaja: dugu nasumičnu lozinku. Na Windowsu (PowerShell):
-   ```
-   [guid]::NewGuid().ToString("N") + [guid]::NewGuid().ToString("N")
-   ```
-   (macOS / Linux: `openssl rand -hex 32`). Kopiraj rezultat i spremi ga:
-   ```
-   npx wrangler secret put DEVICE_TOKEN
-   ```
-6. Provjera: otvori adresu Workera u pregledniku. Piše
-   `{"ok":true,"service":"clock assistant"}`.
-
-**3. Upiši to u sat**
-
-1. Ako još nemaš `src/credentials.h`, kopiraj `src/credentials.h.example` u
-   `src/credentials.h`.
-2. Popuni dva retka (adresa **s `/ask` na kraju** i isti ključ uređaja kao u
-   koraku 2.5):
-   ```cpp
-   #define ASSISTANT_URL "https://clock-assistant.<tvoja-poddomena>.workers.dev/ask"
-   #define ASSISTANT_TOKEN "<tvoj ključ uređaja>"
-   ```
-3. Prebaci na ploču, pa **Postavke → Aplikacije → AI Assistant**.
-
-`credentials.h` je u `.gitignore`, pa adresa i ključ nikad ne završe na
-GitHubu. Ako želiš promijeniti kako odgovara (dužina, ton) ili Gemini model,
-uredi `worker/src/index.js` ili `worker/wrangler.toml` i ponovno pokreni
-`npx wrangler deploy`; sat ne treba novi upload. `npx wrangler tail` uživo
-pokazuje log Workera.
 
 ## Svakodnevno korištenje
 

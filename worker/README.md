@@ -1,14 +1,14 @@
 # Clock Assistant Worker
 
 A small [Cloudflare Worker](https://developers.cloudflare.com/workers/) for the
-clock's **Assistant** app. The clock sends a recorded question (WAV, base64)
+clock's **AI Assistant** app. The clock sends a recorded question (WAV, base64)
 plus the conversation so far; the Worker asks Google Gemini and returns a
 short plain-text answer in the language of the question, using Google Search
 when the question needs current information.
 
-Setup, step by step: see **Setting up the Assistant** in the main
-[README](../README.md#setting-up-the-assistant) (Croatian:
-[README.hr.md](../README.hr.md#postavljanje-asistenta)).
+Setup, step by step: [docs/AI-ASSISTANT.md](../docs/AI-ASSISTANT.md)
+(Croatian: [docs/AI-ASSISTANT.hr.md](../docs/AI-ASSISTANT.hr.md)). Your keys
+stay in Cloudflare and in your local `src/credentials.h`, never in git.
 
 Short version:
 
