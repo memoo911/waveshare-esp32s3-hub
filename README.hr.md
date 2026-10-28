@@ -32,8 +32,9 @@ Sustav je zadano na engleskom; u postavkama se prebacuje na hrvatski (vidi
   isključivanje
 - **Aplikacije** za početni ekran (**Postavke → Aplikacije**): **Kuhinjski
   tajmer** (veliko odbrojavanje, zvoni kao stari mehanički tajmer), **Libela** (libela s
-  mjehurićem preko senzora pokreta) i **Asistent** (držiš tipku, pitaš naglas,
-  čitaš odgovor; Gemini preko tvog besplatnog Cloudflare Workera)
+  mjehurićem preko senzora pokreta) i **AI Assistant** (držiš tipku, pitaš naglas,
+  čitaš odgovor; Gemini s Google pretraživanjem, preko tvog besplatnog
+  Cloudflare Workera)
 - **Zvuk**: zvono svaki sat po želji (zadano isključeno, noću tiho)
 - **Jezici**: engleski (zadano) i hrvatski, na satu i na stranicama na mobitelu
 - **Baterija**: postotak i oznaka punjenja; tamniji ekran noću (može se
@@ -243,7 +244,7 @@ također gasi ploču.
 ![Aplikacije i kuhinjski tajmer](docs/timer.png)
 
 **Postavke → Aplikacije** bira aplikaciju koja je na početnom ekranu uz
-Postavke: **Vrijeme** (zadano), **Kuhinjski tajmer**, **Libela** ili **Asistent**. Dodirni jednu;
+Postavke: **Vrijeme** (zadano), **Kuhinjski tajmer**, **Libela** ili **AI Assistant**. Dodirni jednu;
 zelena točka pokazuje odabranu. Za povratak prognoze ponovno odaberi Vrijeme.
 Stići će još aplikacija.
 
@@ -279,7 +280,7 @@ odbrojavanje na ekranu, ekran se ne gasi.
 Ako se mjehurić miče na krivu stranu, okreni ili zamijeni osi s
 `LEVEL_FLIP_X`, `LEVEL_FLIP_Y` i `LEVEL_SWAP_XY` u `src/Config.h`.
 
-**Asistent** (dodirni njegovu pločicu na početnom ekranu; prvo ga postavi,
+**AI Assistant** (dodirni njegovu pločicu na početnom ekranu; prvo ga postavi,
 vidi [Postavljanje Asistenta](#postavljanje-asistenta)):
 
 1. Drži tipku **BOOT** (gornju) i postavi pitanje. Mikrofon zasvijetli i
@@ -291,7 +292,9 @@ vidi [Postavljanje Asistenta](#postavljanje-asistenta)):
 4. **Novi razgovor** pri dnu kreće ispočetka. Isto vrijedi i kad izađeš sa
    stranice.
 
-Odgovara na jeziku na kojem pitaš, u nekoliko kratkih rečenica. Dok sluša i
+Odgovara na jeziku na kojem pitaš, u nekoliko kratkih rečenica, a kad pitanje
+traži svježe podatke (utakmice, vijesti, radno vrijeme, cijene) sam pretraži
+Google. Dok sluša i
 razmišlja ekran se ne gasi. Na ovoj stranici BOOT služi za pitanja, na
 ostalima i dalje osvježava prognozu.
 
@@ -310,8 +313,9 @@ Treba ti: Google račun, besplatan Cloudflare račun i
 1. Otvori [Google AI Studio → API keys](https://aistudio.google.com/apikey) i
    prijavi se.
 2. Klikni **Create API key** i kopiraj ključ. Ne dijeli ga ni s kim.
-3. Gemini se plaća po korištenju (vrlo malo po pitanju). Besplatna ograničenja
-   i cijene su na istoj stranici pod **Billing**.
+3. Gemini se plaća po korištenju: vrlo malo po pitanju, a pitanja za koja
+   pretražuje Google koštaju malo više nakon mjesečnog besplatnog dijela.
+   Trenutna ograničenja i cijene su na istoj stranici pod **Billing**.
 
 **2. Postavi Worker na internet**
 
@@ -356,7 +360,7 @@ Treba ti: Google račun, besplatan Cloudflare račun i
    #define ASSISTANT_URL "https://clock-assistant.<tvoja-poddomena>.workers.dev/ask"
    #define ASSISTANT_TOKEN "<tvoj ključ uređaja>"
    ```
-3. Prebaci na ploču, pa **Postavke → Aplikacije → Asistent**.
+3. Prebaci na ploču, pa **Postavke → Aplikacije → AI Assistant**.
 
 `credentials.h` je u `.gitignore`, pa adresa i ključ nikad ne završe na
 GitHubu. Ako želiš promijeniti kako odgovara (dužina, ton) ili Gemini model,
@@ -368,13 +372,13 @@ pokazuje log Workera.
 
 | Radnja | Što radi |
 |---|---|
-| Dodir pločice na početnom ekranu | Otvara odabranu aplikaciju (Vrijeme, Kuhinjski tajmer, Libela ili Asistent) ili Postavke |
+| Dodir pločice na početnom ekranu | Otvara odabranu aplikaciju (Vrijeme, Kuhinjski tajmer, Libela ili AI Assistant) ili Postavke |
 | Povlačenje **ulijevo** na ekranu s vremenom | Prognoza za 3 dana |
 | Povlačenje **udesno** ili **‹** gore lijevo | Natrag |
 | **Postavke → Zaslon** | Klizač za svjetlinu; **Gašenje ekrana** bira kad se ekran gasi; **Noćno zatamnjenje** pali/gasi tamniji ekran noću (22:00 do 07:00) |
-| **Postavke → Aplikacije** | Vrijeme, Kuhinjski tajmer, Libela ili Asistent na početnom ekranu |
+| **Postavke → Aplikacije** | Vrijeme, Kuhinjski tajmer, Libela ili AI Assistant na početnom ekranu |
 | **Postavke → Zvuk** | Klizač za glasnoću (kratki ton kad pustiš prst); dodir ispod njega pali/gasi zvono svaki sat |
-| Tipka **BOOT** | Osvježi prognozu odmah (gore piše "Osvježavam…"); pali ugašen ekran; zaustavlja zvono tajmera; na stranici Asistenta: drži za pitanje |
+| Tipka **BOOT** | Osvježi prognozu odmah (gore piše "Osvježavam…"); pali ugašen ekran; zaustavlja zvono tajmera; na stranici AI Assistanta: drži za pitanje |
 | Dodir tamnog ekrana ili podizanje sata | Pali ekran |
 | **PWR**, kratko | Ekran gasi / pali |
 | Povlačenje gore / dolje u **Postavkama** | Pomiče popis (dolje su Aplikacije, Jezik, Isključi) |
@@ -437,8 +441,8 @@ blokira.
   stranice otvorene na ploči.
 - Asistent snima samo dok držiš BOOT na njegovoj stranici. Snimka, dosadašnji
   razgovor, lokalno vrijeme sata i mjesto prognoze idu na tvoj Cloudflare
-  Worker i odatle u Google Gemini (tamo vrijede Googleovi uvjeti za Gemini
-  API). Sat pamti razgovor samo dok ne kreneš novi ili ne izađeš sa
+  Worker i odatle u Google Gemini, koji za to može pretražiti Google (tamo
+  vrijede Googleovi uvjeti za Gemini API). Sat pamti razgovor samo dok ne kreneš novi ili ne izađeš sa
   stranice, a Worker ništa ne sprema. Veza je HTTPS s provjerom certifikata.
 
 ## Razvoj

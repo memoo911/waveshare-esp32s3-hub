@@ -3,7 +3,8 @@
 A small [Cloudflare Worker](https://developers.cloudflare.com/workers/) for the
 clock's **Assistant** app. The clock sends a recorded question (WAV, base64)
 plus the conversation so far; the Worker asks Google Gemini and returns a
-short plain-text answer in the language of the question.
+short plain-text answer in the language of the question, using Google Search
+when the question needs current information.
 
 Setup, step by step: see **Setting up the Assistant** in the main
 [README](../README.md#setting-up-the-assistant) (Croatian:

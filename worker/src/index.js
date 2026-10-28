@@ -31,11 +31,13 @@ Rules:
   so follow-ups like "and tomorrow?" refer to them.
 - If the audio is silent or you can't understand it, set "answer" to a short sentence
   saying you didn't catch that, in the fallback language.
-- You have no internet access. For live data (weather, news, prices) say briefly that
-  you can't check it right now.
+- Use Google Search for anything current or that you aren't sure of: sports fixtures
+  and results, news, opening hours, prices, events, weather elsewhere. Give dates and
+  times in the clock's local time. Don't mention sources or links.
 
-Return JSON: "question" is the user's question as you understood it (a transcript),
-"answer" is your reply.`;
+Reply in exactly this format, nothing before or after it:
+QUESTION: <the user's question as you understood it>
+ANSWER: <your reply>`;
 
 export default {
   async fetch(request, env) {
@@ -96,18 +98,9 @@ export default {
         body: JSON.stringify({
           systemInstruction: { parts: [{ text: `${SYSTEM_PROMPT}\n\n${context}` }] },
           contents,
-          generationConfig: {
-            temperature: 0.5,
-            responseMimeType: "application/json",
-            responseSchema: {
-              type: "OBJECT",
-              properties: {
-                question: { type: "STRING" },
-                answer: { type: "STRING" },
-              },
-              required: ["question", "answer"],
-            },
-          },
+          // Gemini searches Google by itself when a question needs current information.
+          tools: [{ googleSearch: {} }],
+          generationConfig: { temperature: 0.5 },
         }),
       },
     );
@@ -122,15 +115,15 @@ export default {
       .map((p) => (p.thought ? "" : p.text || ""))
       .join("")
       .trim();
+    // "QUESTION: ...\nANSWER: ..." (if the format is off, the whole text is the answer)
     let question = "";
-    let answer = "";
-    try {
-      const parsed = JSON.parse(text);
-      question = String(parsed.question || "");
-      answer = String(parsed.answer || "");
-    } catch {
-      answer = text; // not JSON after all: use it as the answer
+    let answer = text;
+    const m = text.match(/QUESTION:\s*([\s\S]*?)\s*ANSWER:\s*([\s\S]*)$/i);
+    if (m) {
+      question = m[1];
+      answer = m[2];
     }
+    answer = answer.replace(/\s*\[\d+(?:,\s*\d+)*\]/g, ""); // citation marks like [1]
     return json({ question: forScreen(question, 300), answer: forScreen(answer, MAX_ANSWER_CHARS) });
   },
 };

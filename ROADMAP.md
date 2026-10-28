@@ -103,7 +103,7 @@ Weather (default), **Kitchen timer** or **Spirit level**.
   (max 15 s, ES8311 microphone at 12 kHz), the answer shows as text. Audio
   goes to the user's own Cloudflare Worker (`worker/`), which keeps the
   Gemini API key and asks Gemini for a short plain-text answer in the
-  question's language. The conversation lasts until "New conversation" or
+  question's language, with Google Search for current information. The conversation lasts until "New conversation" or
   leaving the page. Device key and Worker address in the gitignored
   `credentials.h`. Later: spoken answers through the speaker.
 
