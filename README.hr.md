@@ -55,6 +55,9 @@ Sustav je zadano na engleskom; u postavkama se prebacuje na hrvatski (vidi
   ploče s oznakom **V2** (ekran CO5300) su zadane. Starije ploče bez V2 imaju
   ekran SH8601 (vidi [Verzije ploče](#verzije-ploče)).
 - **USB-C kabel koji prenosi podatke** (neki kabeli služe samo za punjenje).
+- Samo za **AI Assistanta** (po želji): Google račun s Gemini API ključem i
+  malo kredita (npr. 5 $), te besplatan Cloudflare račun. Vidi
+  [upute korak po korak](docs/AI-ASSISTANT.hr.md).
 - Po želji: **Li-Po baterija 3,7 V s utikačem MX1.25** (2 pina; Waveshare
   prodaje odgovarajuću). Prije spajanja provjeri da crvena žica ide na `+` na
   konektoru `BAT`.
@@ -124,7 +127,13 @@ Kad na GitHubu ima novog koda:
 2. Upali ploču (**PWR**) i spoji je USB-C kabelom.
 3. Pritisni `Ctrl+Alt+U` (Windows) ili klikni **→ Upload** u plavoj traci.
 4. Pričekaj **SUCCESS**; ploča se pokrene s novom verzijom. Spremljene mreže,
-   mjesto, svjetlina, zvuk i jezik ostaju kakvi su bili.
+   mjesto, svjetlina, zvuk i jezik ostaju kakvi su bili, a isto i tvoj
+   `src/credentials.h` (git ga nikad ne dira).
+5. Ako build ne prođe nakon većeg ažuriranja (datoteke premještene u druge
+   mape), jednom pokreni **PlatformIO → waveshare-v2 → General → Clean** i
+   ponovi upload. Clean briše samo stari build u `.pio`, ništa tvoje.
+6. Ako je ažuriranje promijenilo mapu `worker/` (piše u poruci commita),
+   pokreni i `npx wrangler deploy` u mapi `worker`.
 
 ## 4. Prvo pokretanje
 
@@ -140,7 +149,7 @@ Popis se pomiče: povuci ga prema gore da vidiš redove na dnu.
 | **Location (Mjesto)** | Mjesto za prognozu, bira se na mobitelu |
 | **Display (Zaslon)** | Svjetlina, kad se ekran gasi, noćno zatamnjenje |
 | **Sound (Zvuk)** | Glasnoća, zvono svaki sat |
-| **Apps (Aplikacije)** | Bira aplikaciju na početnom ekranu: Vrijeme, Kuhinjski tajmer ili Libela |
+| **Apps (Aplikacije)** | Bira aplikaciju na početnom ekranu: Vrijeme, Kuhinjski tajmer, Libela ili AI Assistant |
 | **Language (Jezik)** | Engleski / hrvatski, dodir mijenja |
 | **Turn off (Isključi)** | Gasi ploču (pali se tipkom **PWR**) |
 
@@ -372,6 +381,8 @@ ostaju i kad se ploča ugasi.
 | Ekran se nikad ne gasi | **Postavke → Zaslon → Gašenje ekrana** je na **Nikad**, ili je otvorena stranica s QR kodom za WiFi / mjesto |
 | Stranica za postavljanje se ne otvara na mobitelu | Skeniraj drugi QR kod ili otvori `192.168.4.1` u pregledniku. Na Samsung mobitelima pomaže da na trenutak isključiš **Postavke → Veze → Više postavki veze → Privatni DNS** |
 | Stranica za mjesto se ne učitava | Mobitel i ploča moraju biti na istom WiFi-ju |
+| AI Assistant javlja grešku | Svaka poruka je objašnjena u [uputama za AI Assistanta](docs/AI-ASSISTANT.hr.md#rješavanje-problema) |
+| Build ne prođe nakon `git pull` | **PlatformIO → waveshare-v2 → General → Clean**, pa ponovi upload |
 
 ## Verzije ploče
 
@@ -389,11 +400,13 @@ svjetline, zadana glasnoća i vrijeme gašenja ekrana, osjetljivost paljenja
 podizanjem (`LIFT_TILT_DEG`, `LIFT_JOLT_G`), zaštita baterije
 (`BATTERY_CARE`, `BATTERY_FULL_PERCENT`, `BATTERY_RESUME_PERCENT`), razina
 za gašenje kod prazne baterije (`BATTERY_SHUTDOWN_PERCENT`) i štednja
-(`CPU_MHZ_SCREEN_OFF`, `LIGHT_SLEEP`). Svakih 10 minuta Serial Monitor ispiše red `[Power]`
+(`CPU_MHZ_SCREEN_OFF`, `LIGHT_SLEEP`), zvono kuhinjskog tajmera
+(`TIMER_RING_MS`, `TIMER_RING_EVERY_MS`) i ograničenja snimanja AI
+Assistanta (`ASSISTANT_MAX_RECORD_MS`, `ASSISTANT_MAX_TURNS`). Svakih 10 minuta Serial Monitor ispiše red `[Power]`
 s postotkom i naponom baterije, da se vidi koliko traje.
 
 `src/credentials.h` **nije obavezan**. U njemu su WiFi mreže ako ih radije
-upisuješ u kod, te adresa Workera i ključ uređaja za Asistenta. Kopiraj
+upisuješ u kod, te adresa Workera i ključ uređaja za AI Assistanta. Kopiraj
 `src/credentials.h.example` u `src/credentials.h` i popuni što koristiš. Mreže se
 jednom kopiraju u memoriju ploče; nakon toga njima upravljaš na uređaju kao i
 ostalima. `credentials.h` je u `.gitignore`, a i provjera prije commita ga
@@ -446,6 +459,8 @@ Kod je pod [MIT licencom](LICENSE). Dijelovi drugih autora zadržavaju svoje
 licence: font Inter (SIL Open Font License 1.1,
 [licenses/Inter-OFL.txt](licenses/Inter-OFL.txt)), biblioteka za QR kodove
 (MIT, Project Nayuki) i upravljački program za ES8311 (Apache 2.0, Espressif).
-Open-Meteo i ip-api.com besplatni su za nekomercijalnu upotrebu. Ostale
+Open-Meteo i ip-api.com besplatni su za nekomercijalnu upotrebu. AI Assistant
+koristi Google Gemini API (s Google pretraživanjem) preko tvog Cloudflare
+Workera. Ostale
 korištene biblioteke: GFX Library for Arduino, XPowersLib, ArduinoJson. Popis s
 poveznicama je u [README.md](README.md#credits).

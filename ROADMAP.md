@@ -81,7 +81,7 @@ The speaker works (ES8311 codec). No sounds on touch.
 
 ## Next (planned order)
 
-### 7. Apps ✅ app switcher, kitchen timer, spirit level (verified on hardware), assistant (new)
+### 7. Apps ✅ app switcher, kitchen timer, spirit level (verified on hardware), AI Assistant (verified on hardware)
 
 Settings → **Apps** chooses the app on the home screen next to Settings:
 Weather (default), **Kitchen timer** or **Spirit level**.
@@ -99,7 +99,7 @@ Weather (default), **Kitchen timer** or **Spirit level**.
   "Set zero" removes. Possible later: two-step zero (tap, turn 180°, tap) that
   also works on a surface that isn't level.
 
-- **Assistant** (new, to be tested on hardware): hold BOOT and ask out loud
+- **AI Assistant** (verified on hardware): hold BOOT and ask out loud
   (max 15 s, ES8311 microphone at 12 kHz), the answer shows as text. Audio
   goes to the user's own Cloudflare Worker (`worker/`), which keeps the
   Gemini API key and asks Gemini for a short plain-text answer in the
@@ -158,6 +158,11 @@ Optional fine-tuning:
 - Weather card: local time of the forecast place when it is in another time
   zone (e.g. "New York · 09:05")
 - Network details, diagnostics, about page
+- Alarm clock (days of the week, snooze)
+- AI Assistant: voice commands that act ("set a timer for 8 minutes"),
+  reminders, spoken answers through the speaker
+- Hourly forecast and a rain warning
+- Watch faces for the home screen, night clock
 
 ## Decisions
 
@@ -174,3 +179,9 @@ Optional fine-tuning:
 - No personal data in the repo: WiFi passwords stay on the board (or in the
   git-ignored `credentials.h`), screenshots use example names.
 - Big rows and generous tap areas: the screen is small.
+- One system with apps: each app lives in `src/apps/<name>/` with its logic
+  (`XApp`) and its screen (`XUi`), and reaches the system only through
+  `core/System.h`. Drawing has no Arduino code, so the PC preview shows
+  every screen.
+- API keys never in the repo: the Gemini key is a Cloudflare Worker secret,
+  the Worker address and device key live in the git-ignored `credentials.h`.

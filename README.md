@@ -55,6 +55,9 @@ PlatformIO · CST820 touch · AXP2101 · QMI8658 · ES8311*
   boards marked **V2** (CO5300 display) are the default here. Older boards
   without V2 have an SH8601 display (see [Board versions](#board-versions)).
 - A **USB-C cable that carries data** (some charging-only cables don't).
+- Only for the **AI Assistant** (optional): a Google account with a Gemini API
+  key and a little credit (for example $5), and a free Cloudflare account. See
+  the [step-by-step guide](docs/AI-ASSISTANT.md).
 - Optional: a **3.7 V Li-Po battery with an MX1.25 2-pin plug** (Waveshare
   sells a matching one). Check that the red wire goes to `+` on the `BAT`
   connector before plugging it in.
@@ -124,7 +127,13 @@ When there is new code on GitHub:
 2. Turn the board on (**PWR**) and connect it with the USB-C cable.
 3. Press `Ctrl+Alt+U` (Windows), or click **→ Upload** in the blue bar.
 4. Wait for **SUCCESS**; the board restarts with the new version. Your saved
-   networks, place, brightness, sound and language stay as they were.
+   networks, place, brightness, sound and language stay as they were, and so
+   does your `src/credentials.h` (git never touches it).
+5. If the build fails after a big update (files moved to other folders), run
+   **PlatformIO → waveshare-v2 → General → Clean** once and upload again.
+   Clean only deletes the old build in `.pio`, nothing of yours.
+6. If the update changed the `worker/` folder (see the commit message), also
+   run `npx wrangler deploy` in the `worker` folder.
 
 ## 4. First start
 
@@ -140,7 +149,7 @@ The list scrolls: drag it up to see the rows at the bottom.
 | **Location** | Place for the forecast, chosen on your phone |
 | **Display** | Brightness, when the screen turns off, night dimming |
 | **Sound** | Volume, hourly chime |
-| **Apps** | Choose the app on the home screen: Weather, Kitchen timer or Spirit level |
+| **Apps** | Choose the app on the home screen: Weather, Kitchen timer, Spirit level or AI Assistant |
 | **Language** | English / Croatian, tap to switch |
 | **Turn off** | Switch the board off (press **PWR** to turn it on) |
 
@@ -376,6 +385,8 @@ place are kept when the board is turned off.
 | Screen never turns off | **Settings → Display → Screen off after** is set to **Never**, or the WiFi setup / location QR page is open |
 | Setup page doesn't open on the phone | Scan the second QR code, or open `192.168.4.1` in the browser. On Samsung phones, turning off **Settings → Connections → More connection settings → Private DNS** for a moment helps |
 | Location page doesn't load | Phone and board must be on the same WiFi |
+| AI Assistant shows an error | Each message is explained in the [AI Assistant guide](docs/AI-ASSISTANT.md#troubleshooting) |
+| Build fails after `git pull` | **PlatformIO → waveshare-v2 → General → Clean**, then upload again |
 
 ## Board versions
 
@@ -393,7 +404,9 @@ brightness limits, default volume and screen-off time, how sensitive waking on
 pick-up is (`LIFT_TILT_DEG`, `LIFT_JOLT_G`), battery care
 (`BATTERY_CARE`, `BATTERY_FULL_PERCENT`, `BATTERY_RESUME_PERCENT`), the
 low-battery switch-off level (`BATTERY_SHUTDOWN_PERCENT`) and power saving
-(`CPU_MHZ_SCREEN_OFF`, `LIGHT_SLEEP`). Every 10 minutes the serial monitor shows a
+(`CPU_MHZ_SCREEN_OFF`, `LIGHT_SLEEP`), the kitchen timer bell
+(`TIMER_RING_MS`, `TIMER_RING_EVERY_MS`) and the AI Assistant's recording
+limits (`ASSISTANT_MAX_RECORD_MS`, `ASSISTANT_MAX_TURNS`). Every 10 minutes the serial monitor shows a
 `[Power]` line with the battery level and voltage, to see how long it lasts.
 
 `src/credentials.h` is **optional**. It holds WiFi networks if you prefer to
@@ -467,6 +480,9 @@ commit check blocks it as well.
   (`lib/es8311`)
 - QR codes: [QR Code generator library](https://www.nayuki.io/page/qr-code-generator-library)
   by Project Nayuki, MIT License (`lib/qrcodegen`)
+- AI Assistant: [Google Gemini API](https://ai.google.dev) (with Google
+  Search), running through your own [Cloudflare Worker](https://developers.cloudflare.com/workers/);
+  HTTPS root certificates from the Mozilla CA list
 - Display driver: [GFX Library for Arduino](https://github.com/moononournation/Arduino_GFX);
   power management: [XPowersLib](https://github.com/lewisxhe/XPowersLib);
   JSON: [ArduinoJson](https://arduinojson.org)
