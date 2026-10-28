@@ -84,12 +84,6 @@ inline void drawLevelStatic(Canvas &c, const UiState &st) {
   } else {
     const Rect &t = l.vertical ? kTubeV : kTubeH;
     c.roundRect(t.x, t.y, t.w, t.h, (l.vertical ? t.w : t.h) / 2.0f, kLevelGlass);
-    // Glass highlight along the tube.
-    if (l.vertical) {
-      c.capsule(t.x + 13, t.y + 44, t.x + 13, t.y + 110, 2, rgb(0xFFFFFF), 0.07f);
-    } else {
-      c.capsule(t.x + 44, t.y + 13, t.x + 110, t.y + 13, 2, rgb(0xFFFFFF), 0.07f);
-    }
     // Marks either side of the centre: the bubble fits between them when level.
     const float cx = t.x + t.w / 2.0f, cy = t.y + t.h / 2.0f;
     const float gap = kTubeBubbleLen / 2 + 8;
