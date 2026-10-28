@@ -33,15 +33,22 @@ vijesti, radno vrijeme, cijene) sam pretraži Google.
 
 - Projekt otvoren u **VS Codeu** s **PlatformIO** (kao u glavnom README-u), a
   sat već radi na tvom WiFi-ju
-- **Google račun** (za Gemini API ključ)
+- **Google račun** (za Gemini API ključ) i nekoliko dolara kredita za Gemini
+  (npr. 5 $)
 - Besplatan **Cloudflare račun**
 - **Node.js** (LTS verzija) na računalu
 - Petnaestak minuta
 
-**Cijena:** Cloudflare Workers je za ovo besplatan. Gemini se plaća po
-korištenju: vrlo malo po pitanju, a pitanja za koja pretražuje Google koštaju
-malo više nakon mjesečnog besplatnog dijela. Trenutne cijene i ograničenja:
-Google AI Studio → **Billing**.
+## Cijena
+
+- **Cloudflare je besplatan.** Besplatni Workers paket je daleko više nego što
+  jednom satu treba; kartica nije potrebna.
+- **Za Gemini treba uplatiti kredit.** Da bi API pouzdano radio, u Google AI
+  Studiju postaviš plaćanje i **uplatiš malo kredita, npr. 5 $** (vidi 2.
+  korak). Potrošnja je vrlo mala: pitanje košta djelić centa, a pitanje za
+  koje pretražuje Google malo više (nakon mjesečnog besplatnog dijela), pa
+  nekoliko dolara traje dugo. Trenutne cijene i ograničenja: Google AI
+  Studio → **Billing**.
 
 ---
 
@@ -64,8 +71,12 @@ Google AI Studio → **Billing**.
    prijavi se Google računom.
 2. Klikni **Create API key**. Ako pita za projekt, odaberi onaj na kojem je
    plaćanje / kredit.
-3. Kopiraj ključ (počinje s `AIza…`).
-4. **Spremi ga negdje privatno** (upravitelj lozinki ili privatna bilješka).
+3. Postavi plaćanje da bi ključ radio: u AI Studiju otvori **Billing** (ili
+   **Dashboard → Billing**), dodaj način plaćanja i **uplati malo kredita, npr.
+   5 $**. To je dovoljno za dugo vremena; na istoj stranici vidiš koliko si
+   potrošio.
+4. Kopiraj ključ (počinje s `AIza…`).
+5. **Spremi ga negdje privatno** (upravitelj lozinki ili privatna bilješka).
    Zalijepit ćeš ga u Cloudflare u 7. koraku.
 
 > [!WARNING]
@@ -247,7 +258,7 @@ ni u gitu.
 |---|---|
 | **Još nije postavljen** | `ASSISTANT_URL` ili `ASSISTANT_TOKEN` je prazan u `src/credentials.h`, ili nisi napravio upload nakon upisa (8. i 9. korak). |
 | **Worker je odbio ključ uređaja** | Ključ u `credentials.h` nije isti kao `DEVICE_TOKEN` u Workeru. Upiši ga ponovno (7. korak, točka 1) ili ispravi `credentials.h`, pa upload. |
-| **Nešto nije u redu (502)** | Gemini je odbio: kriv ili nepostojeći `GEMINI_API_KEY`, nema kredita, ili model ne postoji. Pokreni `npx wrangler tail` i pitaj ponovno da vidiš poruku Geminija. |
+| **Nešto nije u redu (502)** | Gemini je odbio: kriv ili nepostojeći `GEMINI_API_KEY`, nema kredita ili nije postavljeno plaćanje (2. korak, točka 3), ili model ne postoji. Pokreni `npx wrangler tail` i pitaj ponovno da vidiš poruku Geminija. |
 | **Nešto nije u redu (0)** ili **(-1)** | Sat ne može doći do Workera: provjeri adresu u `credentials.h` (treba `https://` i `/ask`) i WiFi. |
 | **Nema WiFi veze** | Sat nije spojen; provjeri **Postavke → WiFi**. |
 | **Nisam te razumio** | Nije čuo ništa korisno: govori malo glasnije i bliže, nakon što mikrofon zasvijetli. |

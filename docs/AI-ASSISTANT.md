@@ -33,15 +33,22 @@ hours, prices).
 
 - The project open in **VS Code** with **PlatformIO** (as in the main README),
   and the clock already working on your WiFi
-- A **Google account** (for the Gemini API key)
+- A **Google account** (for the Gemini API key) and a few dollars of Gemini
+  credit (for example $5)
 - A free **Cloudflare account**
 - **Node.js** (LTS version) on your computer
 - About 15 minutes
 
-**Cost:** Cloudflare Workers is free for this. Gemini is billed per use: very
-little per question; questions where it searches Google cost a bit more after
-a monthly free allowance. Current prices and limits: Google AI Studio →
-**Billing**.
+## Cost
+
+- **Cloudflare is free.** The free Workers plan is far more than one clock
+  needs; no card required.
+- **Gemini needs credit.** To use the API reliably you set up billing in
+  Google AI Studio and **add a little credit, for example $5** (see step 2).
+  The usage is very small: a question costs a fraction of a cent, a question
+  where it searches Google a bit more (after a monthly free allowance), so a
+  few dollars last a long time. Current prices and limits: Google AI Studio →
+  **Billing**.
 
 ---
 
@@ -64,8 +71,12 @@ a monthly free allowance. Current prices and limits: Google AI Studio →
    sign in with your Google account.
 2. Click **Create API key**. If it asks for a project, pick the one that has
    billing / credit on it.
-3. Copy the key (it starts with `AIza…`).
-4. **Save it somewhere private** (a password manager or a private note). You
+3. Set up billing so the key can be used: in AI Studio open **Billing** (or
+   **Dashboard → Billing**), add a payment method and **add a little credit,
+   for example $5**. That's enough for a long time; you can see what you've
+   used on the same page.
+4. Copy the key (it starts with `AIza…`).
+5. **Save it somewhere private** (a password manager or a private note). You
    will paste it into Cloudflare in step 7.
 
 > [!WARNING]
@@ -252,7 +263,7 @@ and not in git.
 |---|---|
 | **Not set up yet** | `ASSISTANT_URL` or `ASSISTANT_TOKEN` is empty in `src/credentials.h`, or you didn't upload after filling them in (step 8 and 9). |
 | **The Worker rejected the device key** | The key in `credentials.h` isn't the same as `DEVICE_TOKEN` in the Worker. Set it again (step 7.1) or fix `credentials.h`, then upload. |
-| **Something went wrong (502)** | Gemini refused: wrong or missing `GEMINI_API_KEY`, no credit/billing, or a model name that doesn't exist. Run `npx wrangler tail` and ask again to see Gemini's message. |
+| **Something went wrong (502)** | Gemini refused: wrong or missing `GEMINI_API_KEY`, no credit or billing set up (step 2.3), or a model name that doesn't exist. Run `npx wrangler tail` and ask again to see Gemini's message. |
 | **Something went wrong (0)** or **(-1)** | The clock couldn't reach the Worker: check the address in `credentials.h` (it needs `https://` and `/ask`), and the WiFi. |
 | **No WiFi connection** | The clock isn't connected; check **Settings → WiFi**. |
 | **I didn't catch that** | It heard nothing useful: speak a little louder, closer, after the microphone lights up. |

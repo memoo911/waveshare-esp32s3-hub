@@ -289,7 +289,9 @@ making the device key, storing the keys as Worker secrets, filling in
 
 In short:
 
-1. Create a **Gemini API key** in [Google AI Studio](https://aistudio.google.com/apikey).
+1. Create a **Gemini API key** in [Google AI Studio](https://aistudio.google.com/apikey)
+   and add a little credit there (for example $5; usage is very small).
+   Cloudflare is free.
 2. In the `worker` folder: `npx wrangler login`, then `npx wrangler deploy`
    (prints `https://clock-assistant.<your-subdomain>.workers.dev`).
 3. Make a **device key** (a long random password) and store both keys in the

@@ -285,7 +285,9 @@ ključ uređaja, spremanje ključeva kao tajni u Workeru, upis u
 
 Ukratko:
 
-1. Napravi **Gemini API ključ** u [Google AI Studiju](https://aistudio.google.com/apikey).
+1. Napravi **Gemini API ključ** u [Google AI Studiju](https://aistudio.google.com/apikey)
+   i tamo uplati malo kredita (npr. 5 $; potrošnja je vrlo mala). Cloudflare je
+   besplatan.
 2. U mapi `worker`: `npx wrangler login`, pa `npx wrangler deploy` (ispiše
    `https://clock-assistant.<tvoja-poddomena>.workers.dev`).
 3. Napravi **ključ uređaja** (dugu nasumičnu lozinku) i spremi oba ključa u
