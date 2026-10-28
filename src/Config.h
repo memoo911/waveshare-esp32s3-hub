@@ -2,7 +2,7 @@
 
 #include <Arduino.h>
 
-#include "I18n.h"
+#include "core/I18n.h"
 
 // ============= Defaults (changed on the device in Settings) =============
 // Place for the forecast until one is picked from a phone.

@@ -1,11 +1,13 @@
-# Waveshare AMOLED sat s vremenskom prognozom
+# Waveshare ESP32-S3 Hub
 
 [English](README.md) · **Hrvatski**
 
-Sat i vremenska stanica za **Waveshare ESP32-S3-Touch-AMOLED-1.8**: veliki
-sat, trenutno vrijeme s animiranim ikonama, prognoza za 3 dana i postavke koje
-mijenjaš s mobitela skeniranjem QR koda. Bez API ključeva i bez aplikacije za
-instalirati.
+Jedan sustav na dodir s aplikacijama za **Waveshare ESP32-S3-Touch-AMOLED-1.8**:
+**glasovni AI asistent** (držiš tipku, pitaš, čitaš odgovor), veliki sat s
+**vremenskom prognozom** (animirane ikone, prognoza za 3 dana), **kuhinjski
+tajmer** i **libela**. WiFi i mjesto postavljaš s mobitela skeniranjem QR koda.
+Sat i prognoza ne trebaju API ključeve ni aplikaciju za instalirati; AI
+asistent koristi tvoj Gemini ključ preko besplatnog Cloudflare Workera.
 
 **Isprobano na ploči V2** (ekran CO5300). Za originalnu ploču V1 (ekran
 SH8601) postoji posebno okruženje za prevođenje, ali još nije isprobano; vidi
@@ -77,15 +79,15 @@ U VS Codeu otvori terminal (**Terminal → New Terminal**), idi u mapu gdje
 držiš projekte i pokreni:
 
 ```
-git clone https://github.com/memoo911/waveshare-weather.git
-cd waveshare-weather
+git clone https://github.com/memoo911/waveshare-esp32s3-hub.git
+cd waveshare-esp32s3-hub
 git config core.hooksPath .githooks
 ```
 
 Zadnji red uključuje provjeru koja te sprječava da slučajno pošalješ na
 GitHub datoteku sa svojom WiFi lozinkom.
 
-Zatim **File → Open Folder…**, odaberi mapu `waveshare-weather` i klikni
+Zatim **File → Open Folder…**, odaberi mapu `waveshare-esp32s3-hub` i klikni
 **Select Folder**. Pričekaj par sekundi da se PlatformIO učita: u plavoj traci
 na dnu pojave se gumbi **✓** (Build) i **→** (Upload).
 
@@ -112,7 +114,7 @@ Monitor) ili pritisni `Ctrl+Alt+S`.
 Kad na GitHubu ima novog koda:
 
 1. U VS Codeu otvori terminal (**Terminal → New Terminal**) u mapi
-   `waveshare-weather` i pokreni:
+   projekta i pokreni:
    ```
    git pull
    ```
@@ -146,7 +148,7 @@ Natrag: povuci udesno ili dodirni **‹** gore lijevo.
 Zasad su dostupna dva jezika: **engleski** (zadano) i **hrvatski**. Za
 promjenu otvori **Settings** i dodirni red **Language**; ponovni dodir vraća
 natrag. Izbor se pamti i vrijedi i za stranice za postavljanje na mobitelu.
-Novi jezici mogu se dodati u `src/I18n.h`.
+Novi jezici mogu se dodati u `src/core/I18n.h`.
 
 ### Spajanje na WiFi
 
@@ -448,8 +450,28 @@ blokira.
 ## Razvoj
 
 Kod, komentari i poruke u gitu su na engleskom. Detalji o alatima (pregled
-ekrana na računalu, generiranje fontova, raspored koda) su u
+ekrana na računalu, generiranje fontova) su u
 [README.md](README.md#development), a plan u `ROADMAP.md`.
+
+Raspored koda: jedan sustav, a svaka aplikacija ima svoju mapu.
+```
+src/
+  main.cpp        sustav: pokretanje, glavna petlja, slojevi ekrana, dodir,
+                  tipke, ekran i baterija
+  Config.h        sve postavke na jednom mjestu
+  core/           System.h (što sustav nudi aplikacijama), I18n.h (tekstovi)
+  gfx/            crtanje (Render.h) i fontovi
+  hw/             zvuk i mikrofon, senzor pokreta, dodir, geste
+  net/            WiFi, vrijeme, vremenska zona, stranice za mobitel
+  ui/             stanje ekrana, zajednički dijelovi, spajanje stranica
+  pages/          početni ekran, postavke, WiFi, zaslon, zvuk, isključi, aplikacije
+  apps/
+    weather/      vrijeme i prognoza
+    timer/        kuhinjski tajmer (logika + ekran)
+    level/        libela (logika + ekran)
+    assistant/    AI Assistant (logika, ekran, veza s Workerom)
+worker/           Cloudflare Worker za AI Assistanta
+```
 
 ## Zasluge i licenca
 

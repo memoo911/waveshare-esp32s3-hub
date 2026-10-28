@@ -1,4 +1,4 @@
-#include "Net.h"
+#include "net/Net.h"
 
 #include <Arduino.h>
 #include <ArduinoJson.h>
@@ -14,7 +14,7 @@
 #include <time.h>
 
 #include "Config.h"
-#include "Portal.h"
+#include "net/Portal.h"
 
 // credentials.h is optional: networks can also be added from a phone.
 #if __has_include("credentials.h")

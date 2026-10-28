@@ -4,7 +4,7 @@
 //   gcc -O2 -c lib/qrcodegen/qrcodegen.c -o qrcodegen.o
 //   g++ -std=c++17 -O2 -Isrc -Ilib/qrcodegen tools/preview.cpp qrcodegen.o -o preview
 //   ./preview out/
-#include "Ui.h"
+#include "ui/Ui.h"
 #include <chrono>
 #include <cstdio>
 #include <string>

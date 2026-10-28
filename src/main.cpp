@@ -1,18 +1,23 @@
-// Clock and weather for the Waveshare ESP32-S3-Touch-AMOLED-1.8.
+// Waveshare ESP32-S3 Hub: the system for the Waveshare
+// ESP32-S3-Touch-AMOLED-1.8. This file is the "operating system": hardware
+// set-up, the main loop, drawing layers, touch and buttons, screen sleep and
+// battery. The apps (weather, kitchen timer, spirit level, AI Assistant) live
+// in apps/, the other pages in pages/; they use core/System.h for what they
+// need from here.
 //
-// - Home screen with Weather and Settings tiles; tap to open, swipe right or
-//   tap "‹" to go back.
+// - Home screen with the chosen app's tile and Settings; tap to open, swipe
+//   right or tap "‹" to go back.
 // - Settings: WiFi and location set up from a phone via QR code, brightness,
 //   sound, language (English / Croatian).
 // - Time from NTP, time zone detected from the network; weather from
-//   Open-Meteo (no API key). Networking lives in Net.cpp.
+//   Open-Meteo (no API key). Networking lives in net/Net.cpp.
 // - Animated icon for the current conditions; at night the moon shows its
 //   real phase.
 // - BOOT button: refresh the weather now (or wake the screen). PWR short
 //   press: screen off/on. The screen sleeps after 1/2/5 minutes idle (or
 //   never, Settings -> Display); a touch or picking the board up wakes it.
 // - Battery care: on USB, charging pauses at 100 % until 90 %.
-// - Sound: volume slider and an optional hourly chime (Audio.cpp).
+// - Sound: volume slider and an optional hourly chime (hw/Audio.cpp).
 //
 // Rendering uses two PSRAM layers: a static base (redrawn only when its
 // content changes, see ui::staticKey) and the frame, where only the animated
@@ -31,14 +36,17 @@
 #include <time.h>
 #include <utility>
 
-#include "Assistant.h"
-#include "Audio.h"
 #include "Config.h"
-#include "Gesture.h"
-#include "Imu.h"
-#include "Net.h"
-#include "Touch.h"
-#include "Ui.h"
+#include "apps/assistant/AssistantApp.h"
+#include "apps/level/LevelApp.h"
+#include "apps/timer/TimerApp.h"
+#include "core/System.h"
+#include "hw/Audio.h"
+#include "hw/Gesture.h"
+#include "hw/Imu.h"
+#include "hw/Touch.h"
+#include "net/Net.h"
+#include "ui/Ui.h"
 
 namespace {
 
@@ -101,9 +109,6 @@ unsigned long wakeReleaseMs = 0;
 int batteryPercent = -1;
 bool batteryCharging = false;
 bool chargePaused = false;
-// Spirit level: smoothed gravity in screen axes (g).
-float gravX = 0, gravY = 0, gravZ = 1; // smoothed, screen axes, in g
-bool gravInit = false;
 bool usbPowered = true; // until the first battery reading
 // After a wake-up by touch or BOOT, stay awake briefly so the touch task and
 // button polling see what happened.
@@ -235,19 +240,16 @@ void setScreenOn(bool on) {
   }
 }
 
-void leaveAssistant();
-void enterAssistant();
-
 void openPage(Page p) {
   if (p == page) return;
   if (p == Page::Settings && page == Page::Home) settingsScroll = 0;
-  if (p == Page::Level) gravInit = false; // no smoothing from an old reading
+  if (p == Page::Level) level_app::open();
   // Pages that need the network task to do something while they're open.
   if (page == Page::WifiSetup) net::setSetupWanted(false);
   if (page == Page::Location) net::setWebWanted(false);
-  if (page == Page::Assistant) leaveAssistant();
+  if (page == Page::Assistant) assistant_app::leave();
   page = p;
-  if (p == Page::Assistant) enterAssistant();
+  if (p == Page::Assistant) assistant_app::enter();
   if (p == Page::WifiSetup) net::setSetupWanted(true);
   if (p == Page::Location) net::setWebWanted(true);
   static const char *const names[] = {"home",       "weather", "forecast",   "settings",
@@ -266,17 +268,9 @@ void toggleLanguage() {
 }
 
 // ---------------------------------------------------------------------------
-// Apps and the kitchen timer
+// Home-screen app
 // ---------------------------------------------------------------------------
 HomeApp homeApp = HomeApp::Weather;
-
-TimerState timerState = TimerState::Idle;
-int timerMinutes = 8;                // chosen time, saved in NVS
-int timerTotalSec = 0;
-unsigned long timerEndMs = 0;        // Running
-unsigned long timerLeftMs = 0;       // Paused
-unsigned long ringStartMs = 0;       // Ringing
-unsigned long nextBeepMs = 0;
 
 void setHomeApp(int index) {
   if (index < 0 || index >= kHomeAppCount || index == static_cast<int>(homeApp)) return;
@@ -285,266 +279,6 @@ void setHomeApp(int index) {
   static const char *const names[] = {"weather", "timer", "level", "assistant"};
   static_assert(sizeof(names) / sizeof(names[0]) == kHomeAppCount, "a name for every app");
   Serial.printf("[UI] home app %s\n", names[index]);
-}
-
-// ---------------------------------------------------------------------------
-// Assistant: hold BOOT on its page to ask, the answer shows as text. The
-// conversation lasts until "New conversation" or leaving the page.
-// ---------------------------------------------------------------------------
-
-
-AssistantPhase aiPhase = AssistantPhase::Ready;
-AssistantError aiError = AssistantError::None;
-int aiStatus = 0;
-unsigned long aiRecordStartMs = 0;
-char aiAnswer[1200] = "";
-
-void assistantFail(AssistantError e, int status = 0) {
-  aiPhase = AssistantPhase::Error;
-  aiError = e;
-  aiStatus = status;
-}
-
-void enterAssistant() {
-  aiPhase = AssistantPhase::Ready;
-  aiAnswer[0] = 0;
-  if (!assistant::configured()) assistantFail(AssistantError::NotSetUp);
-}
-
-void leaveAssistant() {
-  audio::stopRecording();
-  assistant::newConversation();
-  aiPhase = AssistantPhase::Ready;
-  aiAnswer[0] = 0;
-}
-
-void newConversation() {
-  Serial.println("[Assistant] new conversation");
-  assistant::newConversation();
-  aiPhase = AssistantPhase::Ready;
-  aiAnswer[0] = 0;
-}
-
-// BOOT pressed / released on the assistant page.
-void assistantButton(bool down) {
-  if (down) {
-    if (aiPhase == AssistantPhase::Thinking || aiPhase == AssistantPhase::Listening) return;
-    if (!assistant::configured()) {
-      assistantFail(AssistantError::NotSetUp);
-      return;
-    }
-    if (audio::startRecording(ASSISTANT_MAX_RECORD_MS)) {
-      aiPhase = AssistantPhase::Listening;
-      aiRecordStartMs = millis();
-      Serial.println("[Assistant] listening");
-    }
-  } else if (aiPhase == AssistantPhase::Listening) {
-    audio::stopRecording();
-  }
-}
-
-void updateAssistant(UiState &st) {
-  if (aiPhase == AssistantPhase::Listening && !audio::recording()) {
-    size_t n = 0;
-    const int16_t *samples = audio::recordedSamples(n);
-    if (n * 1000 / audio::kMicRate < ASSISTANT_MIN_RECORD_MS) {
-      assistantFail(AssistantError::TooShort);
-    } else {
-      // Local time and place give Gemini context ("what day is it", "will it rain").
-      char when[48] = "";
-      time_t now = time(nullptr);
-      struct tm t;
-      localtime_r(&now, &t);
-      if (t.tm_year > 120) strftime(when, sizeof(when), "%Y-%m-%d %H:%M (%A)", &t);
-      const Place place = net::place();
-      if (assistant::ask(samples, n, audio::kMicRate, language == Lang::Hr ? "hr" : "en", when,
-                         place.name)) {
-        aiPhase = AssistantPhase::Thinking;
-      } else {
-        assistantFail(AssistantError::Server, 0); // previous request still running
-      }
-    }
-  }
-  if (aiPhase == AssistantPhase::Thinking) {
-    switch (assistant::state()) {
-    case assistant::State::Done:
-      assistant::answer(aiAnswer, sizeof(aiAnswer));
-      aiPhase = AssistantPhase::Answer;
-      break;
-    case assistant::State::Failed:
-      switch (assistant::error()) {
-      case assistant::Error::NotSetUp: assistantFail(AssistantError::NotSetUp); break;
-      case assistant::Error::NoWifi: assistantFail(AssistantError::NoWifi); break;
-      case assistant::Error::Unauthorized: assistantFail(AssistantError::Unauthorized); break;
-      case assistant::Error::NotHeard: assistantFail(AssistantError::NotHeard); break;
-      default: assistantFail(AssistantError::Server, assistant::httpStatus()); break;
-      }
-      break;
-    case assistant::State::Idle: // conversation was reset meanwhile
-      aiPhase = AssistantPhase::Ready;
-      break;
-    case assistant::State::Busy: break;
-    }
-  }
-  AssistantInfo &a = st.assistant;
-  a.phase = aiPhase;
-  a.error = aiError;
-  a.status = aiStatus;
-  a.turns = assistant::turns();
-  a.recordMs = aiPhase == AssistantPhase::Listening ? static_cast<int>(millis() - aiRecordStartMs) : 0;
-  a.level = audio::micLevel();
-  a.answer = aiAnswer;
-}
-
-int timerRemainingSec() {
-  if (timerState == TimerState::Running) {
-    const long ms = static_cast<long>(timerEndMs - millis());
-    return ms > 0 ? static_cast<int>((ms + 999) / 1000) : 0;
-  }
-  if (timerState == TimerState::Paused) return static_cast<int>((timerLeftMs + 999) / 1000);
-  return 0;
-}
-
-void setTimerMinutes(int m) {
-  timerMinutes = constrain(m, 1, ui::kTimerMaxMinutes);
-}
-
-void timerAction(ui::TimerAction a, int preset) {
-  using ui::TimerAction;
-  switch (a) {
-  case TimerAction::Minus: setTimerMinutes(timerMinutes - 1); break;
-  case TimerAction::Plus: setTimerMinutes(timerMinutes + 1); break;
-  case TimerAction::Preset: setTimerMinutes(preset); break;
-  case TimerAction::Start:
-    timerTotalSec = timerMinutes * 60;
-    timerEndMs = millis() + timerTotalSec * 1000UL;
-    timerState = TimerState::Running;
-    prefs.putUChar("tmin", static_cast<uint8_t>(timerMinutes));
-    Serial.printf("[Timer] start %d min\n", timerMinutes);
-    break;
-  case TimerAction::Pause:
-    timerLeftMs = static_cast<unsigned long>(max(0L, static_cast<long>(timerEndMs - millis())));
-    timerState = TimerState::Paused;
-    Serial.println("[Timer] pause");
-    break;
-  case TimerAction::Resume:
-    timerEndMs = millis() + timerLeftMs;
-    timerState = TimerState::Running;
-    Serial.println("[Timer] resume");
-    break;
-  case TimerAction::Reset:
-    timerState = TimerState::Idle;
-    Serial.println("[Timer] reset");
-    break;
-  case TimerAction::Stop:
-    timerState = TimerState::Idle;
-    audio::stop();
-    Serial.println("[Timer] stop");
-    break;
-  case TimerAction::None: break;
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Spirit level
-// ---------------------------------------------------------------------------
-bool levelEdge = false;
-// Zero offsets (degrees), saved in NVS: flat x/y, edge horizontal/vertical.
-float zeroX = 0, zeroY = 0, zeroH = 0, zeroV = 0;
-// Last raw (uncalibrated) reading, used by "Set zero".
-LevelInfo levelRaw;
-
-constexpr float kRadToDeg = 57.29578f;
-
-void readLevel(LevelInfo &out) {
-  out = LevelInfo();
-  out.sensor = imu.ready();
-  out.calibrated = zeroX != 0 || zeroY != 0 || zeroH != 0 || zeroV != 0;
-  if (!out.sensor) return;
-  float ax, ay, az;
-  bool ok;
-  {
-    I2cLock lock;
-    ok = imu.accel(ax, ay, az);
-  }
-  if (!ok) return;
-  if (LEVEL_SWAP_XY) std::swap(ax, ay);
-  if (LEVEL_FLIP_X) ax = -ax;
-  if (LEVEL_FLIP_Y) ay = -ay;
-  // Light smoothing: steady bubble, still quick to follow.
-  const float k = gravInit ? 0.3f : 1.0f;
-  gravX += (ax - gravX) * k;
-  gravY += (ay - gravY) * k;
-  gravZ += (az - gravZ) * k;
-  gravInit = true;
-  const float n = sqrtf(gravX * gravX + gravY * gravY + gravZ * gravZ);
-  if (n < 0.2f) return;
-  const float gx = gravX / n, gy = gravY / n, gz = gravZ / n;
-  // Flat or on an edge, with some hysteresis so it doesn't flip back and forth.
-  if (levelEdge && fabsf(gz) > 0.75f) levelEdge = false;
-  else if (!levelEdge && fabsf(gz) < 0.6f) levelEdge = true;
-  out.edge = levelEdge;
-  if (!levelEdge) {
-    out.x = asinf(gx) * kRadToDeg;
-    out.y = asinf(gy) * kRadToDeg;
-  } else {
-    out.vertical = fabsf(gx) > fabsf(gy);
-    out.angle = out.vertical ? atan2f(gy * (gx >= 0 ? 1 : -1), fabsf(gx)) * kRadToDeg
-                             : atan2f(gx * (gy >= 0 ? 1 : -1), fabsf(gy)) * kRadToDeg;
-  }
-  levelRaw = out;
-  out.x -= zeroX;
-  out.y -= zeroY;
-  out.angle -= out.vertical ? zeroV : zeroH;
-
-  static unsigned long lastLogMs = 0;
-  if (millis() - lastLogMs > 1000) {
-    lastLogMs = millis();
-    Serial.printf("[Level] raw %.2f %.2f %.2f -> %s x=%.1f y=%.1f angle=%.1f\n", ax, ay, az,
-                  out.edge ? (out.vertical ? "edge-v" : "edge-h") : "flat", out.x, out.y,
-                  out.angle);
-  }
-}
-
-// The current position counts as level from now on.
-void setLevelZero() {
-  if (!levelRaw.edge) {
-    zeroX = levelRaw.x;
-    zeroY = levelRaw.y;
-    prefs.putFloat("lvx", zeroX);
-    prefs.putFloat("lvy", zeroY);
-  } else if (levelRaw.vertical) {
-    zeroV = levelRaw.angle;
-    prefs.putFloat("lvv", zeroV);
-  } else {
-    zeroH = levelRaw.angle;
-    prefs.putFloat("lvh", zeroH);
-  }
-  Serial.printf("[Level] zero set (%s)\n",
-                levelRaw.edge ? (levelRaw.vertical ? "edge-v" : "edge-h") : "flat");
-}
-
-// Countdown and alarm; runs every loop pass, also while the screen is off.
-void updateTimer() {
-  const unsigned long now = millis();
-  if (timerState == TimerState::Running && static_cast<long>(now - timerEndMs) >= 0) {
-    Serial.println("[Timer] time's up");
-    timerState = TimerState::Ringing;
-    ringStartMs = now;
-    nextBeepMs = now;
-    setScreenOn(true);
-    openPage(Page::Timer);
-  }
-  if (timerState == TimerState::Ringing) {
-    lastActivityMs = now; // keep the screen on while it rings
-    if (now - ringStartMs >= TIMER_RING_MS) {
-      Serial.println("[Timer] alarm over");
-      timerState = TimerState::Idle;
-    } else if (static_cast<long>(now - nextBeepMs) >= 0) {
-      audio::playAlarm();
-      nextBeepMs += TIMER_RING_EVERY_MS;
-    }
-  }
 }
 
 // Settings -> Turn off -> red button: save what's pending and switch the board off through
@@ -587,17 +321,17 @@ void pollButtons() {
   if (bootDown && !bootWasDown) {
     Serial.println("[UI] BOOT");
     lastActivityMs = millis();
-    if (timerState == TimerState::Ringing) {
-      timerAction(ui::TimerAction::Stop, 0);
+    if (timer_app::ringing()) {
+      timer_app::action(ui::TimerAction::Stop, 0);
     } else if (!screenOn) {
       setScreenOn(true);
     } else if (page == Page::Assistant) {
-      assistantButton(true);
+      assistant_app::button(true);
     } else {
       requestRefresh();
     }
   }
-  if (!bootDown && bootWasDown && page == Page::Assistant) assistantButton(false);
+  if (!bootDown && bootWasDown && page == Page::Assistant) assistant_app::button(false);
   bootWasDown = bootDown;
 
   if (pmuReady && millis() - lastPmuPollMs > 50) {
@@ -620,9 +354,8 @@ void sleepIfIdle() {
   const int minutes = ui::kScreenOffMinutes[screenOffIndex];
   // Stays on: no timeout, a QR code being scanned, or the timer counting
   // down on screen.
-  const bool timerShown = page == Page::Timer && timerState != TimerState::Idle;
-  const bool asking = page == Page::Assistant && (aiPhase == AssistantPhase::Listening ||
-                                                  aiPhase == AssistantPhase::Thinking);
+  const bool timerShown = page == Page::Timer && timer_app::active();
+  const bool asking = page == Page::Assistant && assistant_app::busy();
   if (minutes == 0 || page == Page::WifiSetup || page == Page::Location || timerShown ||
       page == Page::Level || asking) {
     lastActivityMs = millis();
@@ -881,8 +614,8 @@ void handleTouch(const UiState &st) {
   while (gestureQueue && xQueueReceive(gestureQueue, &g, 0) == pdTRUE) {
     if (!screenOn || wakeTouch) continue;
     // While the alarm rings, any touch on the timer page stops it.
-    if (page == Page::Timer && timerState == TimerState::Ringing) {
-      timerAction(ui::TimerAction::Stop, 0);
+    if (page == Page::Timer && timer_app::ringing()) {
+      timer_app::action(ui::TimerAction::Stop, 0);
       continue;
     }
     // A touch that scrolled the settings list is not a tap or swipe.
@@ -914,11 +647,11 @@ void handleTouch(const UiState &st) {
       int preset = 0;
       const ui::TimerAction ta = ui::timerActionAt(st, g.x, g.y, preset);
       if (ta != ui::TimerAction::None) {
-        timerAction(ta, preset);
+        timer_app::action(ta, preset);
         break;
       }
       if (ui::tapsZero(st, g.x, g.y)) {
-        setLevelZero();
+        level_app::setZero();
         break;
       }
       const int app = ui::appAt(st, g.x, g.y);
@@ -931,7 +664,7 @@ void handleTouch(const UiState &st) {
         break;
       }
       if (ui::tapsNewChat(st, g.x, g.y)) {
-        newConversation();
+        assistant_app::newConversation();
         break;
       }
       if (ui::tapsLanguage(st, g.x, g.y)) toggleLanguage();
@@ -1098,10 +831,25 @@ void followSetup(const UiState &st) {
 
 } // namespace
 
+// ---------------------------------------------------------------------------
+// System services for the apps (core/System.h)
+// ---------------------------------------------------------------------------
+namespace sys {
+Preferences &prefs() { return ::prefs; }
+Lang language() { return ::language; }
+Page page() { return ::page; }
+void openPage(Page p) { ::openPage(p); }
+void wakeScreen() { setScreenOn(true); }
+void keepAwake() { lastActivityMs = millis(); }
+Imu &imu() { return ::imu; }
+I2cLock::I2cLock() { if (i2cMutex) xSemaphoreTake(i2cMutex, portMAX_DELAY); }
+I2cLock::~I2cLock() { if (i2cMutex) xSemaphoreGive(i2cMutex); }
+} // namespace sys
+
 void setup() {
   Serial.begin(115200);
   delay(300);
-  Serial.println("[Boot] weather clock");
+  Serial.println("[Boot] waveshare-esp32s3-hub");
   pinMode(BUTTON_BOOT_PIN, INPUT_PULLUP);
   initPmu();
   imu.begin();
@@ -1111,11 +859,8 @@ void setup() {
   volumeSetting = prefs.getUChar("vol", VOLUME_DEFAULT_PERCENT);
   chimeOn = prefs.getBool("chime", false);
   homeApp = static_cast<HomeApp>(prefs.getUChar("app", 0) % kHomeAppCount);
-  timerMinutes = constrain(prefs.getUChar("tmin", 8), 1, ui::kTimerMaxMinutes);
-  zeroX = prefs.getFloat("lvx", 0);
-  zeroY = prefs.getFloat("lvy", 0);
-  zeroH = prefs.getFloat("lvh", 0);
-  zeroV = prefs.getFloat("lvv", 0);
+  timer_app::begin();
+  level_app::begin();
   nightDim = prefs.getBool("nightdim", true);
   screenOffIndex = prefs.getUChar("scroff", SCREEN_TIMEOUT_DEFAULT) % ui::kScreenOffChoices;
   language = static_cast<Lang>(prefs.getUChar("lang", static_cast<uint8_t>(DEFAULT_LANGUAGE)));
@@ -1143,7 +888,7 @@ void setup() {
   panel->fillScreen(0x0000);
 
   net::begin();
-  assistant::begin();
+  assistant_app::begin();
   // Above the Arduino loop's priority so drawing never delays touch samples.
   i2cMutex = xSemaphoreCreateMutex();
   gestureQueue = xQueueCreate(8, sizeof(Gesture));
@@ -1173,7 +918,7 @@ void loop() {
     tzset();
   }
   chimeIfHour();
-  updateTimer();
+  timer_app::update();
 
   const unsigned long now = millis();
   // Faster frames while the settings list is being scrolled.
@@ -1198,12 +943,9 @@ void loop() {
   buildState(st, now);
   st.scroll = settingsScroll;
   st.app = homeApp;
-  st.timer.state = timerState;
-  st.timer.minutes = timerMinutes;
-  st.timer.remainingSec = timerRemainingSec();
-  st.timer.totalSec = timerTotalSec;
-  if (page == Page::Level) readLevel(st.level);
-  if (page == Page::Assistant) updateAssistant(st);
+  timer_app::fill(st.timer);
+  if (page == Page::Level) level_app::read(st.level);
+  if (page == Page::Assistant) assistant_app::update(st.assistant);
   followSetup(st);
 
   const unsigned long drawStart = millis();

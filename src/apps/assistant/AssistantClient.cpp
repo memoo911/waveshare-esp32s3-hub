@@ -1,4 +1,4 @@
-#include "Assistant.h"
+#include "apps/assistant/AssistantClient.h"
 
 #include <ArduinoJson.h>
 #include <HTTPClient.h>
@@ -6,7 +6,7 @@
 #include <WiFiClientSecure.h>
 #include <mbedtls/base64.h>
 
-#include "AssistantCerts.h"
+#include "apps/assistant/AssistantCerts.h"
 #include "Config.h"
 
 // The Worker address and device key live in credentials.h (gitignored).

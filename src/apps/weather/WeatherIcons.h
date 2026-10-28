@@ -7,7 +7,7 @@
 //
 // Icons are designed in a 100x100 box around (cx, cy) and scaled by size/100.
 
-#include "Render.h"
+#include "gfx/Render.h"
 
 namespace icons {
 

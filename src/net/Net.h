@@ -5,8 +5,8 @@
 // Everything runs on one background task so the UI never waits for the
 // network. The UI reads snapshots through the functions below.
 
-#include "Screen.h"
-#include "Ui.h"
+#include "ui/Screen.h"
+#include "ui/Ui.h"
 #include <stddef.h>
 
 enum class WifiCode : uint8_t {

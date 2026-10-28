@@ -1,11 +1,13 @@
-# Waveshare AMOLED weather clock
+# Waveshare ESP32-S3 Hub
 
 **English** · [Hrvatski](README.hr.md)
 
-A clock and weather station for the **Waveshare ESP32-S3-Touch-AMOLED-1.8**:
-big clock, current weather with animated icons, a 3-day forecast, and
-settings you change from your phone by scanning a QR code. No API keys, no
-app to install.
+One touch system with apps for the **Waveshare ESP32-S3-Touch-AMOLED-1.8**:
+a **voice AI assistant** (hold a button, ask, read the answer), a big clock
+with **weather** (animated icons, 3-day forecast), a **kitchen timer** and a
+**spirit level**. WiFi and the place are set up from your phone by scanning a
+QR code. The clock and weather need no API keys and no app to install; the AI
+Assistant uses your own Gemini key through a free Cloudflare Worker.
 
 **Tested on the V2 board** (CO5300 display). The original V1 board (SH8601
 display) has its own build environment but hasn't been tested yet; see
@@ -76,15 +78,15 @@ In VS Code open a terminal (**Terminal → New Terminal**), go to the folder
 where you keep projects and run:
 
 ```
-git clone https://github.com/memoo911/waveshare-weather.git
-cd waveshare-weather
+git clone https://github.com/memoo911/waveshare-esp32s3-hub.git
+cd waveshare-esp32s3-hub
 git config core.hooksPath .githooks
 ```
 
 The last line turns on a safety check that stops you from ever committing a
 file with your WiFi password by accident.
 
-Then **File → Open Folder…**, pick the `waveshare-weather` folder and click
+Then **File → Open Folder…**, pick the `waveshare-esp32s3-hub` folder and click
 **Select Folder**. Wait a few seconds until PlatformIO has loaded: a blue bar
 at the bottom shows a **✓** (Build) and **→** (Upload) button.
 
@@ -111,7 +113,7 @@ Afterwards press **PWR** (or unplug and replug) to start normally.
 When there is new code on GitHub:
 
 1. In VS Code open a terminal (**Terminal → New Terminal**) in the
-   `waveshare-weather` folder and run:
+   project folder and run:
    ```
    git pull
    ```
@@ -146,7 +148,7 @@ Two languages are available for now: **English** (default) and **Croatian
 (Hrvatski)**. To switch, open **Settings** and tap the **Language** row; tap
 it again to switch back. The choice is remembered and also applies to the
 setup and location pages on your phone. More languages can be added in
-`src/I18n.h`.
+`src/core/I18n.h`.
 
 ### Connect to WiFi
 
@@ -457,12 +459,32 @@ commit check blocks it as well.
   g++ -std=c++17 -O2 -Isrc -Ilib/qrcodegen tools/preview.cpp qrcodegen.o -o preview
   ./preview out/
   ```
-- `tools/gen_fonts.py` regenerates `src/Fonts.h` from the Inter typeface.
-- Code layout: `main.cpp` (display, touch, buttons, pages), `Net.cpp` (WiFi,
-  weather, time zone, phone pages), `Ui.h` / `Screen.h` (page layouts),
-  `Icons.h` (weather icons), `Render.h` (anti-aliased drawing), `Audio.cpp`
-  (speaker and sounds), `I18n.h`
-  (English and Croatian text). See `ROADMAP.md` for what's next.
+- `tools/gen_fonts.py` regenerates `src/gfx/Fonts.h` from the Inter typeface.
+- Code layout (one system, apps in their own folders):
+  ```
+  src/
+    main.cpp        the system: boot, main loop, drawing layers, touch,
+                    buttons, screen and battery
+    Config.h        all settings in one place
+    core/           System.h (what main offers the apps), I18n.h (text)
+    gfx/            Render.h (anti-aliased drawing), Fonts.h (generated)
+    hw/             Audio (speaker and microphone), Imu, Touch, Gesture
+    net/            Net (WiFi, weather, time zone), Portal (phone pages)
+    ui/             UiState (what the screen shows), Screen and Widgets
+                    (shared parts), Ui.h (ties pages and apps together)
+    pages/          Home, Settings, WiFi, Display, Sound, Turn off, Apps
+    apps/
+      weather/      current weather, forecast, weather icons
+      timer/        kitchen timer: TimerApp (logic) + TimerUi (screen)
+      level/        spirit level: LevelApp + LevelUi
+      assistant/    AI Assistant: AssistantApp + AssistantUi, and
+                    AssistantClient (the request to the Worker)
+  worker/           Cloudflare Worker for the AI Assistant
+  ```
+  Drawing (`*Ui.h`, `pages/`) has no Arduino code, so `tools/preview.cpp`
+  renders it on a PC. A new app gets its own folder under `apps/`, a tile and
+  a page, and an entry in `HomeApp` / `Page` (`ui/UiState.h`). See
+  `ROADMAP.md` for what's next.
 
 ## Credits
 
