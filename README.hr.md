@@ -31,8 +31,9 @@ Sustav je zadano na engleskom; u postavkama se prebacuje na hrvatski (vidi
   glasnoću, vrijeme gašenja ekrana, noćno zatamnjenje, zvono svaki sat, jezik,
   isključivanje
 - **Aplikacije** za početni ekran (**Postavke → Aplikacije**): **Kuhinjski
-  tajmer** (veliko odbrojavanje, zvoni kao stari mehanički tajmer) i **Libela** (libela s
-  mjehurićem preko senzora pokreta)
+  tajmer** (veliko odbrojavanje, zvoni kao stari mehanički tajmer), **Libela** (libela s
+  mjehurićem preko senzora pokreta) i **Asistent** (držiš tipku, pitaš naglas,
+  čitaš odgovor; Gemini preko tvog besplatnog Cloudflare Workera)
 - **Zvuk**: zvono svaki sat po želji (zadano isključeno, noću tiho)
 - **Jezici**: engleski (zadano) i hrvatski, na satu i na stranicama na mobitelu
 - **Baterija**: postotak i oznaka punjenja; tamniji ekran noću (može se
@@ -242,7 +243,7 @@ također gasi ploču.
 ![Aplikacije i kuhinjski tajmer](docs/timer.png)
 
 **Postavke → Aplikacije** bira aplikaciju koja je na početnom ekranu uz
-Postavke: **Vrijeme** (zadano), **Kuhinjski tajmer** ili **Libela**. Dodirni jednu;
+Postavke: **Vrijeme** (zadano), **Kuhinjski tajmer**, **Libela** ili **Asistent**. Dodirni jednu;
 zelena točka pokazuje odabranu. Za povratak prognoze ponovno odaberi Vrijeme.
 Stići će još aplikacija.
 
@@ -278,17 +279,102 @@ odbrojavanje na ekranu, ekran se ne gasi.
 Ako se mjehurić miče na krivu stranu, okreni ili zamijeni osi s
 `LEVEL_FLIP_X`, `LEVEL_FLIP_Y` i `LEVEL_SWAP_XY` u `src/Config.h`.
 
+**Asistent** (dodirni njegovu pločicu na početnom ekranu; prvo ga postavi,
+vidi [Postavljanje Asistenta](#postavljanje-asistenta)):
+
+1. Drži tipku **BOOT** (gornju) i postavi pitanje. Mikrofon zasvijetli i
+   teče vrijeme, najviše **15 sekundi**.
+2. Pusti BOOT. Nekoliko sekundi piše "Razmišljam…", a onda se pojavi odgovor
+   kao tekst. Dugi odgovori prelaze na manja slova.
+3. Za sljedeće pitanje opet drži BOOT. Stari odgovor se zamijeni, ali razgovor
+   je i dalje isti, pa radi i nastavak tipa "a koliko je visok?".
+4. **Novi razgovor** pri dnu kreće ispočetka. Isto vrijedi i kad izađeš sa
+   stranice.
+
+Odgovara na jeziku na kojem pitaš, u nekoliko kratkih rečenica. Dok sluša i
+razmišlja ekran se ne gasi. Na ovoj stranici BOOT služi za pitanja, na
+ostalima i dalje osvježava prognozu.
+
+### Postavljanje Asistenta
+
+Sat šalje snimljeno pitanje na **tvoj** mali poslužitelj, besplatni
+Cloudflare Worker, koji pita Googleov Gemini i vraća odgovor. Tvoj Gemini API
+ključ ostaje u Workeru; sat zna samo adresu Workera i ključ uređaja. Ništa od
+toga nije u repozitoriju: dodaješ to lokalno.
+
+Treba ti: Google račun, besplatan Cloudflare račun i
+[Node.js](https://nodejs.org) (LTS verzija) na računalu.
+
+**1. Gemini API ključ**
+
+1. Otvori [Google AI Studio → API keys](https://aistudio.google.com/apikey) i
+   prijavi se.
+2. Klikni **Create API key** i kopiraj ključ. Ne dijeli ga ni s kim.
+3. Gemini se plaća po korištenju (vrlo malo po pitanju). Besplatna ograničenja
+   i cijene su na istoj stranici pod **Billing**.
+
+**2. Postavi Worker na internet**
+
+1. Napravi besplatan račun na [dash.cloudflare.com/sign-up](https://dash.cloudflare.com/sign-up)
+   i potvrdi email.
+2. U VS Codeu otvori terminal (**Terminal → New Terminal**) u mapi projekta i
+   upiši:
+   ```
+   cd worker
+   npx wrangler login
+   ```
+   Otvori se preglednik: klikni **Allow**.
+3. Prebaci Worker:
+   ```
+   npx wrangler deploy
+   ```
+   Prvi put te pita da odabereš `workers.dev` poddomenu. Na kraju ispiše
+   adresu, npr. `https://clock-assistant.<tvoja-poddomena>.workers.dev`.
+   Zapiši je.
+4. Spremi Gemini ključ u Worker (zalijepi ga kad pita, pa Enter):
+   ```
+   npx wrangler secret put GEMINI_API_KEY
+   ```
+5. Smisli ključ uređaja: dugu nasumičnu lozinku. Na Windowsu (PowerShell):
+   ```
+   [guid]::NewGuid().ToString("N") + [guid]::NewGuid().ToString("N")
+   ```
+   (macOS / Linux: `openssl rand -hex 32`). Kopiraj rezultat i spremi ga:
+   ```
+   npx wrangler secret put DEVICE_TOKEN
+   ```
+6. Provjera: otvori adresu Workera u pregledniku. Piše
+   `{"ok":true,"service":"clock assistant"}`.
+
+**3. Upiši to u sat**
+
+1. Ako još nemaš `src/credentials.h`, kopiraj `src/credentials.h.example` u
+   `src/credentials.h`.
+2. Popuni dva retka (adresa **s `/ask` na kraju** i isti ključ uređaja kao u
+   koraku 2.5):
+   ```cpp
+   #define ASSISTANT_URL "https://clock-assistant.<tvoja-poddomena>.workers.dev/ask"
+   #define ASSISTANT_TOKEN "<tvoj ključ uređaja>"
+   ```
+3. Prebaci na ploču, pa **Postavke → Aplikacije → Asistent**.
+
+`credentials.h` je u `.gitignore`, pa adresa i ključ nikad ne završe na
+GitHubu. Ako želiš promijeniti kako odgovara (dužina, ton) ili Gemini model,
+uredi `worker/src/index.js` ili `worker/wrangler.toml` i ponovno pokreni
+`npx wrangler deploy`; sat ne treba novi upload. `npx wrangler tail` uživo
+pokazuje log Workera.
+
 ## Svakodnevno korištenje
 
 | Radnja | Što radi |
 |---|---|
-| Dodir pločice na početnom ekranu | Otvara odabranu aplikaciju (Vrijeme, Kuhinjski tajmer ili Libela) ili Postavke |
+| Dodir pločice na početnom ekranu | Otvara odabranu aplikaciju (Vrijeme, Kuhinjski tajmer, Libela ili Asistent) ili Postavke |
 | Povlačenje **ulijevo** na ekranu s vremenom | Prognoza za 3 dana |
 | Povlačenje **udesno** ili **‹** gore lijevo | Natrag |
 | **Postavke → Zaslon** | Klizač za svjetlinu; **Gašenje ekrana** bira kad se ekran gasi; **Noćno zatamnjenje** pali/gasi tamniji ekran noću (22:00 do 07:00) |
-| **Postavke → Aplikacije** | Vrijeme, Kuhinjski tajmer ili Libela na početnom ekranu |
+| **Postavke → Aplikacije** | Vrijeme, Kuhinjski tajmer, Libela ili Asistent na početnom ekranu |
 | **Postavke → Zvuk** | Klizač za glasnoću (kratki ton kad pustiš prst); dodir ispod njega pali/gasi zvono svaki sat |
-| Tipka **BOOT** | Osvježi prognozu odmah (gore piše "Osvježavam…"); pali ugašen ekran; zaustavlja zvono tajmera |
+| Tipka **BOOT** | Osvježi prognozu odmah (gore piše "Osvježavam…"); pali ugašen ekran; zaustavlja zvono tajmera; na stranici Asistenta: drži za pitanje |
 | Dodir tamnog ekrana ili podizanje sata | Pali ekran |
 | **PWR**, kratko | Ekran gasi / pali |
 | Povlačenje gore / dolje u **Postavkama** | Pomiče popis (dolje su Aplikacije, Jezik, Isključi) |
@@ -333,8 +419,9 @@ za gašenje kod prazne baterije (`BATTERY_SHUTDOWN_PERCENT`) i štednja
 (`CPU_MHZ_SCREEN_OFF`, `LIGHT_SLEEP`). Svakih 10 minuta Serial Monitor ispiše red `[Power]`
 s postotkom i naponom baterije, da se vidi koliko traje.
 
-`src/credentials.h` **nije obavezan**. Ako radije upisuješ WiFi mreže u kod,
-kopiraj `src/credentials.h.example` u `src/credentials.h` i popuni ga. Mreže se
+`src/credentials.h` **nije obavezan**. U njemu su WiFi mreže ako ih radije
+upisuješ u kod, te adresa Workera i ključ uređaja za Asistenta. Kopiraj
+`src/credentials.h.example` u `src/credentials.h` i popuni što koristiš. Mreže se
 jednom kopiraju u memoriju ploče; nakon toga njima upravljaš na uređaju kao i
 ostalima. `credentials.h` je u `.gitignore`, a i provjera prije commita ga
 blokira.
@@ -348,6 +435,11 @@ blokira.
   odredi vremensku zonu, i NTP poslužitelje za točno vrijeme.
 - Stranica za mjesto i stranica za postavljanje WiFi-ja rade samo dok su te
   stranice otvorene na ploči.
+- Asistent snima samo dok držiš BOOT na njegovoj stranici. Snimka, dosadašnji
+  razgovor, lokalno vrijeme sata i mjesto prognoze idu na tvoj Cloudflare
+  Worker i odatle u Google Gemini (tamo vrijede Googleovi uvjeti za Gemini
+  API). Sat pamti razgovor samo dok ne kreneš novi ili ne izađeš sa
+  stranice, a Worker ništa ne sprema. Veza je HTTPS s provjerom certifikata.
 
 ## Razvoj
 

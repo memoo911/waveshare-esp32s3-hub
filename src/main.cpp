@@ -31,6 +31,7 @@
 #include <time.h>
 #include <utility>
 
+#include "Assistant.h"
 #include "Audio.h"
 #include "Config.h"
 #include "Gesture.h"
@@ -234,6 +235,9 @@ void setScreenOn(bool on) {
   }
 }
 
+void leaveAssistant();
+void enterAssistant();
+
 void openPage(Page p) {
   if (p == page) return;
   if (p == Page::Settings && page == Page::Home) settingsScroll = 0;
@@ -241,13 +245,16 @@ void openPage(Page p) {
   // Pages that need the network task to do something while they're open.
   if (page == Page::WifiSetup) net::setSetupWanted(false);
   if (page == Page::Location) net::setWebWanted(false);
+  if (page == Page::Assistant) leaveAssistant();
   page = p;
+  if (p == Page::Assistant) enterAssistant();
   if (p == Page::WifiSetup) net::setSetupWanted(true);
   if (p == Page::Location) net::setWebWanted(true);
-  static const char *names[] = {"home",       "weather", "forecast",   "settings",
-                                "brightness", "wifi",    "wifi setup", "location",
-                                "sound",      "turn off", "apps",       "timer",
-                                "level"};
+  static const char *const names[] = {"home",       "weather", "forecast",   "settings",
+                                      "brightness", "wifi",    "wifi setup", "location",
+                                      "sound",      "turn off", "apps",       "timer",
+                                      "level",      "assistant"};
+  static_assert(sizeof(names) / sizeof(names[0]) == kPageCount, "a name for every page");
   Serial.printf("[UI] page %s\n", names[static_cast<int>(p)]);
 }
 
@@ -275,7 +282,118 @@ void setHomeApp(int index) {
   if (index < 0 || index >= kHomeAppCount || index == static_cast<int>(homeApp)) return;
   homeApp = static_cast<HomeApp>(index);
   prefs.putUChar("app", static_cast<uint8_t>(index));
-  Serial.printf("[UI] home app %s\n", homeApp == HomeApp::Timer ? "timer" : "weather");
+  static const char *const names[] = {"weather", "timer", "level", "assistant"};
+  static_assert(sizeof(names) / sizeof(names[0]) == kHomeAppCount, "a name for every app");
+  Serial.printf("[UI] home app %s\n", names[index]);
+}
+
+// ---------------------------------------------------------------------------
+// Assistant: hold BOOT on its page to ask, the answer shows as text. The
+// conversation lasts until "New conversation" or leaving the page.
+// ---------------------------------------------------------------------------
+
+
+AssistantPhase aiPhase = AssistantPhase::Ready;
+AssistantError aiError = AssistantError::None;
+int aiStatus = 0;
+unsigned long aiRecordStartMs = 0;
+char aiAnswer[1200] = "";
+
+void assistantFail(AssistantError e, int status = 0) {
+  aiPhase = AssistantPhase::Error;
+  aiError = e;
+  aiStatus = status;
+}
+
+void enterAssistant() {
+  aiPhase = AssistantPhase::Ready;
+  aiAnswer[0] = 0;
+  if (!assistant::configured()) assistantFail(AssistantError::NotSetUp);
+}
+
+void leaveAssistant() {
+  audio::stopRecording();
+  assistant::newConversation();
+  aiPhase = AssistantPhase::Ready;
+  aiAnswer[0] = 0;
+}
+
+void newConversation() {
+  Serial.println("[Assistant] new conversation");
+  assistant::newConversation();
+  aiPhase = AssistantPhase::Ready;
+  aiAnswer[0] = 0;
+}
+
+// BOOT pressed / released on the assistant page.
+void assistantButton(bool down) {
+  if (down) {
+    if (aiPhase == AssistantPhase::Thinking || aiPhase == AssistantPhase::Listening) return;
+    if (!assistant::configured()) {
+      assistantFail(AssistantError::NotSetUp);
+      return;
+    }
+    if (audio::startRecording(ASSISTANT_MAX_RECORD_MS)) {
+      aiPhase = AssistantPhase::Listening;
+      aiRecordStartMs = millis();
+      Serial.println("[Assistant] listening");
+    }
+  } else if (aiPhase == AssistantPhase::Listening) {
+    audio::stopRecording();
+  }
+}
+
+void updateAssistant(UiState &st) {
+  if (aiPhase == AssistantPhase::Listening && !audio::recording()) {
+    size_t n = 0;
+    const int16_t *samples = audio::recordedSamples(n);
+    if (n * 1000 / audio::kMicRate < ASSISTANT_MIN_RECORD_MS) {
+      assistantFail(AssistantError::TooShort);
+    } else {
+      // Local time and place give Gemini context ("what day is it", "will it rain").
+      char when[48] = "";
+      time_t now = time(nullptr);
+      struct tm t;
+      localtime_r(&now, &t);
+      if (t.tm_year > 120) strftime(when, sizeof(when), "%Y-%m-%d %H:%M (%A)", &t);
+      const Place place = net::place();
+      if (assistant::ask(samples, n, audio::kMicRate, language == Lang::Hr ? "hr" : "en", when,
+                         place.name)) {
+        aiPhase = AssistantPhase::Thinking;
+      } else {
+        assistantFail(AssistantError::Server, 0); // previous request still running
+      }
+    }
+  }
+  if (aiPhase == AssistantPhase::Thinking) {
+    switch (assistant::state()) {
+    case assistant::State::Done:
+      assistant::answer(aiAnswer, sizeof(aiAnswer));
+      aiPhase = AssistantPhase::Answer;
+      break;
+    case assistant::State::Failed:
+      switch (assistant::error()) {
+      case assistant::Error::NotSetUp: assistantFail(AssistantError::NotSetUp); break;
+      case assistant::Error::NoWifi: assistantFail(AssistantError::NoWifi); break;
+      case assistant::Error::Unauthorized: assistantFail(AssistantError::Unauthorized); break;
+      case assistant::Error::NotHeard: assistantFail(AssistantError::NotHeard); break;
+      default: assistantFail(AssistantError::Server, assistant::httpStatus()); break;
+      }
+      break;
+    case assistant::State::Idle: // conversation was reset meanwhile
+      aiPhase = AssistantPhase::Ready;
+      break;
+    case assistant::State::Busy: break;
+    }
+  }
+  AssistantInfo &a = st.assistant;
+  a.phase = aiPhase;
+  a.error = aiError;
+  a.status = aiStatus;
+  a.turns = assistant::turns();
+  a.recordMs = aiPhase == AssistantPhase::Listening ? static_cast<int>(millis() - aiRecordStartMs) : 0;
+  a.level = audio::micLevel();
+  a.answer = aiAnswer;
 }
 
 int timerRemainingSec() {
@@ -473,10 +591,13 @@ void pollButtons() {
       timerAction(ui::TimerAction::Stop, 0);
     } else if (!screenOn) {
       setScreenOn(true);
+    } else if (page == Page::Assistant) {
+      assistantButton(true);
     } else {
       requestRefresh();
     }
   }
+  if (!bootDown && bootWasDown && page == Page::Assistant) assistantButton(false);
   bootWasDown = bootDown;
 
   if (pmuReady && millis() - lastPmuPollMs > 50) {
@@ -500,8 +621,10 @@ void sleepIfIdle() {
   // Stays on: no timeout, a QR code being scanned, or the timer counting
   // down on screen.
   const bool timerShown = page == Page::Timer && timerState != TimerState::Idle;
+  const bool asking = page == Page::Assistant && (aiPhase == AssistantPhase::Listening ||
+                                                  aiPhase == AssistantPhase::Thinking);
   if (minutes == 0 || page == Page::WifiSetup || page == Page::Location || timerShown ||
-      page == Page::Level) {
+      page == Page::Level || asking) {
     lastActivityMs = millis();
     return;
   }
@@ -807,6 +930,10 @@ void handleTouch(const UiState &st) {
         turnOff();
         break;
       }
+      if (ui::tapsNewChat(st, g.x, g.y)) {
+        newConversation();
+        break;
+      }
       if (ui::tapsLanguage(st, g.x, g.y)) toggleLanguage();
       else if (ui::tapsChime(st, g.x, g.y)) toggleChime();
       else if (ui::tapsScreenOff(st, g.x, g.y)) nextScreenOff();
@@ -1016,6 +1143,7 @@ void setup() {
   panel->fillScreen(0x0000);
 
   net::begin();
+  assistant::begin();
   // Above the Arduino loop's priority so drawing never delays touch samples.
   i2cMutex = xSemaphoreCreateMutex();
   gestureQueue = xQueueCreate(8, sizeof(Gesture));
@@ -1075,6 +1203,7 @@ void loop() {
   st.timer.remainingSec = timerRemainingSec();
   st.timer.totalSec = timerTotalSec;
   if (page == Page::Level) readLevel(st.level);
+  if (page == Page::Assistant) updateAssistant(st);
   followSetup(st);
 
   const unsigned long drawStart = millis();

@@ -178,6 +178,7 @@ void importFromHeader() {
   String imported = prefs.getString("imported", "\n");
   bool changed = false;
   for (int i = 0; i < WIFI_NETWORK_COUNT; i++) {
+    if (!WIFI_NETWORKS[i].ssid[0]) continue; // empty example line
     const String key = String(WIFI_NETWORKS[i].ssid) + "\n";
     if (imported.indexOf("\n" + key) >= 0) continue;
     bool exists = false;

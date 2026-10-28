@@ -30,8 +30,9 @@ PlatformIO · CST820 touch · AXP2101 · QMI8658 · ES8311*
   and volume sliders, screen-off time, night dimming, hourly chime, language,
   turn off
 - **Apps** for the home screen (**Settings → Apps**): **Kitchen timer** (big
-  countdown, rings like an old wind-up kitchen timer) and **Spirit level** (bubble level using
-  the motion sensor)
+  countdown, rings like an old wind-up kitchen timer), **Spirit level** (bubble level using
+  the motion sensor) and **Assistant** (hold a button, ask out loud, read the
+  answer; Gemini through your own free Cloudflare Worker)
 - **Sound**: optional hourly chime (off by default, silent at night)
 - **Languages**: English (default) and Croatian (Hrvatski) for now, on the
   board and on the phone pages
@@ -246,7 +247,7 @@ seconds also turns it off.
 ![Apps and kitchen timer](docs/timer.png)
 
 **Settings → Apps** chooses the app that sits on the home screen next to
-Settings: **Weather** (default), **Kitchen timer** or **Spirit level**. Tap one; the green dot
+Settings: **Weather** (default), **Kitchen timer**, **Spirit level** or **Assistant**. Tap one; the green dot
 shows the chosen app. To get the weather back, choose Weather again. More
 apps will follow.
 
@@ -281,17 +282,102 @@ off. While the countdown is on screen, the screen stays on.
 If the bubble moves the wrong way, flip or swap the axes with
 `LEVEL_FLIP_X`, `LEVEL_FLIP_Y` and `LEVEL_SWAP_XY` in `src/Config.h`.
 
+**Assistant** (tap its tile on the home screen; set it up first, see
+[Setting up the Assistant](#setting-up-the-assistant)):
+
+1. Hold the **BOOT** button (the top one) and ask your question. The
+   microphone lights up and a timer runs, up to **15 seconds**.
+2. Let go of BOOT. "Thinking…" shows for a few seconds, then the answer appears
+   as text. Long answers switch to a smaller font.
+3. Hold BOOT again for the next question. The old answer is replaced, but it's
+   still the same conversation, so follow-ups like "and how tall is it?" work.
+4. **New conversation** at the bottom starts over. Leaving the page does the
+   same.
+
+It answers in the language you ask in, in a few short sentences. The screen
+stays on while it listens and thinks. On this page BOOT is for questions; on
+the other pages it still refreshes the weather.
+
+### Setting up the Assistant
+
+The clock sends your recorded question to **your own** small server, a free
+Cloudflare Worker, which asks Google's Gemini and sends back the answer. Your
+Gemini API key stays in the Worker; the clock only knows the Worker's address
+and a device key. Nothing of this is in the repository: you add it locally.
+
+You need: a Google account, a free Cloudflare account and
+[Node.js](https://nodejs.org) (the LTS version) on your computer.
+
+**1. Gemini API key**
+
+1. Open [Google AI Studio → API keys](https://aistudio.google.com/apikey) and
+   sign in.
+2. Click **Create API key**, then copy the key. Keep it private.
+3. Gemini bills per use (very little per question). Free limits and prices are
+   on the same site under **Billing**.
+
+**2. Put the Worker online**
+
+1. Create a free account at [dash.cloudflare.com/sign-up](https://dash.cloudflare.com/sign-up)
+   and confirm your email.
+2. In VS Code open the terminal (**Terminal → New Terminal**) in the project
+   folder and type:
+   ```
+   cd worker
+   npx wrangler login
+   ```
+   A browser opens: click **Allow**.
+3. Upload the Worker:
+   ```
+   npx wrangler deploy
+   ```
+   The first time it asks you to pick a `workers.dev` subdomain. At the end it
+   prints the address, e.g. `https://clock-assistant.<your-subdomain>.workers.dev`.
+   Write it down.
+4. Store the Gemini key in the Worker (paste it when asked, then Enter):
+   ```
+   npx wrangler secret put GEMINI_API_KEY
+   ```
+5. Make up a device key: a long random password. On Windows (PowerShell):
+   ```
+   [guid]::NewGuid().ToString("N") + [guid]::NewGuid().ToString("N")
+   ```
+   (macOS / Linux: `openssl rand -hex 32`). Copy the result and store it:
+   ```
+   npx wrangler secret put DEVICE_TOKEN
+   ```
+6. Check: open the Worker's address in a browser. It shows
+   `{"ok":true,"service":"clock assistant"}`.
+
+**3. Tell the clock**
+
+1. If you don't have `src/credentials.h` yet, copy
+   `src/credentials.h.example` to `src/credentials.h`.
+2. Fill in the two lines (address **with `/ask` at the end**, and the same
+   device key as in step 2.5):
+   ```cpp
+   #define ASSISTANT_URL "https://clock-assistant.<your-subdomain>.workers.dev/ask"
+   #define ASSISTANT_TOKEN "<your device key>"
+   ```
+3. Upload to the board, then **Settings → Apps → Assistant**.
+
+`credentials.h` is in `.gitignore`, so the address and key never end up on
+GitHub. To change how it answers (length, tone) or the Gemini model, edit
+`worker/src/index.js` or `worker/wrangler.toml` and run `npx wrangler deploy`
+again; the clock doesn't need a new upload. `npx wrangler tail` shows the
+Worker's log live.
+
 ## Everyday use
 
 | Action | What it does |
 |---|---|
-| Tap a tile on the home screen | Opens the chosen app (Weather, Kitchen timer or Spirit level) or Settings |
+| Tap a tile on the home screen | Opens the chosen app (Weather, Kitchen timer, Spirit level or Assistant) or Settings |
 | Swipe **left** on the weather screen | 3-day forecast |
 | Swipe **right**, or tap **‹** at the top left | Back |
 | **Settings → Display** | Drag the brightness slider; tap **Screen off after** to choose when the screen turns off; tap **Night dimming** to switch the dimmer night screen (22:00 to 07:00) on or off |
-| **Settings → Apps** | Weather, Kitchen timer or Spirit level on the home screen |
+| **Settings → Apps** | Weather, Kitchen timer, Spirit level or Assistant on the home screen |
 | **Settings → Sound** | Drag the volume slider (a short note plays when you let go); tap below it to switch the hourly chime on or off |
-| **BOOT** button | Refresh the weather now ("Refreshing…" shows at the top); wakes the screen when it's off; stops the timer alarm |
+| **BOOT** button | Refresh the weather now ("Refreshing…" shows at the top); wakes the screen when it's off; stops the timer alarm; on the Assistant page: hold to ask |
 | Touch the dark screen, or pick the board up | Wakes it |
 | **PWR**, short press | Screen off / on |
 | Drag up / down in **Settings** | Scroll the list (more rows below: Apps, Language, Turn off) |
@@ -336,8 +422,9 @@ low-battery switch-off level (`BATTERY_SHUTDOWN_PERCENT`) and power saving
 (`CPU_MHZ_SCREEN_OFF`, `LIGHT_SLEEP`). Every 10 minutes the serial monitor shows a
 `[Power]` line with the battery level and voltage, to see how long it lasts.
 
-`src/credentials.h` is **optional**. If you prefer to list WiFi networks in
-code, copy `src/credentials.h.example` to `src/credentials.h` and fill it in.
+`src/credentials.h` is **optional**. It holds WiFi networks if you prefer to
+list them in code, and the Assistant's Worker address and device key. Copy
+`src/credentials.h.example` to `src/credentials.h` and fill in what you use.
 They are copied into the board's saved networks once; after that you manage
 them on the device like any other. `credentials.h` is in `.gitignore`, and the
 commit check blocks it as well.
@@ -351,6 +438,12 @@ commit check blocks it as well.
   from your public IP address, and NTP time servers.
 - The location page and the setup page only run while those pages are open
   on the board.
+- The Assistant records only while you hold BOOT on its page. The recording,
+  the conversation so far, the clock's local time and the forecast place go to
+  your own Cloudflare Worker and from there to Google Gemini (Google's Gemini
+  API terms apply there). The clock keeps the conversation only until you
+  start a new one or leave the page, and the Worker stores nothing. The
+  connection is HTTPS with the certificate checked.
 
 ## Development
 

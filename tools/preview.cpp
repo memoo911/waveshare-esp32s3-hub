@@ -140,6 +140,17 @@ int main(int argc, char **argv) {
       {"timer_ringing_en", Page::Timer, 3, true, 12.6f, 0.3f, 17, Lang::En},
       {"poweroff_en", Page::PowerOff, 3, true, 12.6f, 0.3f, 17, Lang::En},
       {"night_en", Page::Weather, 0, false, 4.2f, 0.62f, 23, Lang::En},
+      {"home_assistant", Page::Home, 3, true, 12.6f, 0.3f, 17},
+      {"assistant_ready", Page::Assistant, 3, true, 12.6f, 0.3f, 17},
+      {"assistant_listening", Page::Assistant, 3, true, 12.6f, 0.3f, 17},
+      {"assistant_thinking", Page::Assistant, 3, true, 12.6f, 0.3f, 17},
+      {"assistant_answer", Page::Assistant, 3, true, 12.6f, 0.3f, 17},
+      {"assistant_long", Page::Assistant, 3, true, 12.6f, 0.3f, 17},
+      {"assistant_setup", Page::Assistant, 3, true, 12.6f, 0.3f, 17},
+      {"assistant_error", Page::Assistant, 3, true, 12.6f, 0.3f, 17},
+      {"home_assistant_en", Page::Home, 3, true, 12.6f, 0.3f, 17, Lang::En},
+      {"assistant_ready_en", Page::Assistant, 3, true, 12.6f, 0.3f, 17, Lang::En},
+      {"assistant_answer_en", Page::Assistant, 3, true, 12.6f, 0.3f, 17, Lang::En},
   };
   for (const Case &cs : cases) {
     UiState st = makeState(cs.page, cs.code, cs.day, cs.temp, cs.phase, cs.hour, cs.lang);
@@ -178,6 +189,36 @@ int main(int argc, char **argv) {
       snprintf(st.info.nets[0].ssid, 33, "My phone hotspot");
       snprintf(st.info.nets[1].ssid, 33, "Network");
       st.info.nets[1].fromCode = false;
+    }
+    if (name.rfind("home_assistant", 0) == 0) st.app = HomeApp::Assistant;
+    if (name.rfind("assistant", 0) == 0) {
+      AssistantInfo &ai = st.assistant;
+      if (name == "assistant_listening") {
+        ai.phase = AssistantPhase::Listening; ai.recordMs = 4200; ai.level = 0.8f;
+      }
+      if (name == "assistant_thinking") { ai.phase = AssistantPhase::Thinking; ai.turns = 1; }
+      if (name == "assistant_answer") {
+        ai.phase = AssistantPhase::Answer; ai.turns = 2;
+        ai.answer = "Triglav je visok 2864 m. To je najviši vrh Slovenije i Julijskih Alpa, "
+                    "a nalazi se u Triglavskom nacionalnom parku.";
+      }
+      if (name == "assistant_answer_en") {
+        ai.phase = AssistantPhase::Answer; ai.turns = 1;
+        ai.answer = "Soft: 6 minutes. Medium: 8 minutes. Hard: 10 to 11 minutes. Start timing "
+                    "when the water boils, then cool the egg in cold water.";
+      }
+      if (name == "assistant_long") {
+        ai.phase = AssistantPhase::Answer; ai.turns = 3;
+        ai.answer = "Za palačinke ti treba 2 jaja, 250 ml mlijeka, 150 g brašna i prstohvat soli. "
+                    "Sve izmiješaj u glatko tijesto i ostavi ga 15 minuta da odstoji. Zagrij "
+                    "tavu, lagano je namaži uljem i ulij tanak sloj tijesta. Peci oko minutu sa "
+                    "svake strane, dok ne dobije zlatnu boju. Poslužuj s marmeladom, nutelom ili "
+                    "orasima, a možeš dodati i malo šećera u prahu po vrhu.";
+      }
+      if (name == "assistant_setup") { ai.phase = AssistantPhase::Error; ai.error = AssistantError::NotSetUp; }
+      if (name == "assistant_error") {
+        ai.phase = AssistantPhase::Error; ai.error = AssistantError::Server; ai.status = 502; ai.turns = 1;
+      }
     }
     if (name.rfind("settings_end", 0) == 0) {
       st.scroll = ui::kSettingsMaxScroll;

@@ -1,5 +1,11 @@
-# WiFi credentials (copy src/credentials.h.example to src/credentials.h)
+# WiFi and assistant settings (copy src/credentials.h.example to src/credentials.h)
 src/credentials.h
+
+# Cloudflare Worker: local state and secrets
+worker/.wrangler/
+worker/node_modules/
+worker/.dev.vars
+.dev.vars
 
 # PlatformIO
 .pio/

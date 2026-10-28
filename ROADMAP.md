@@ -81,7 +81,7 @@ The speaker works (ES8311 codec). No sounds on touch.
 
 ## Next (planned order)
 
-### 7. Apps ✅ app switcher, kitchen timer, spirit level (verified on hardware)
+### 7. Apps ✅ app switcher, kitchen timer, spirit level (verified on hardware), assistant (new)
 
 Settings → **Apps** chooses the app on the home screen next to Settings:
 Weather (default), **Kitchen timer** or **Spirit level**.
@@ -98,6 +98,14 @@ Weather (default), **Kitchen timer** or **Spirit level**.
   `LEVEL_FLIP_X` on). Each board reads a couple of degrees off flat, which
   "Set zero" removes. Possible later: two-step zero (tap, turn 180°, tap) that
   also works on a surface that isn't level.
+
+- **Assistant** (new, to be tested on hardware): hold BOOT and ask out loud
+  (max 15 s, ES8311 microphone at 12 kHz), the answer shows as text. Audio
+  goes to the user's own Cloudflare Worker (`worker/`), which keeps the
+  Gemini API key and asks Gemini for a short plain-text answer in the
+  question's language. The conversation lasts until "New conversation" or
+  leaving the page. Device key and Worker address in the gitignored
+  `credentials.h`. Later: spoken answers through the speaker.
 
 Later: **Avatar** (an animated character, later the face of an AI
 assistant; design to be agreed first), alarm clock, calculator, music player

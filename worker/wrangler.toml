@@ -1,0 +1,12 @@
+# Cloudflare Worker for the clock's Assistant app (see ../README.md, "Assistant").
+# No secrets in this file: GEMINI_API_KEY and DEVICE_TOKEN are set with
+#   npx wrangler secret put GEMINI_API_KEY
+#   npx wrangler secret put DEVICE_TOKEN
+name = "clock-assistant"
+main = "src/index.js"
+compatibility_date = "2025-09-01"
+
+[vars]
+# Any Gemini model that understands audio. A "flash-lite" model is cheaper and
+# faster, a bigger one is smarter.
+GEMINI_MODEL = "gemini-3.8-flash"

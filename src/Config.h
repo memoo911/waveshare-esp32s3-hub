@@ -67,6 +67,14 @@ constexpr bool LEVEL_SWAP_XY = true;
 constexpr bool LEVEL_FLIP_X = true;
 constexpr bool LEVEL_FLIP_Y = false;
 
+// Assistant app: hold BOOT and speak, at most ASSISTANT_MAX_RECORD_MS; a
+// shorter press than ASSISTANT_MIN_RECORD_MS is ignored. The Worker address
+// and device key go in credentials.h (see credentials.h.example).
+constexpr unsigned long ASSISTANT_MAX_RECORD_MS = 15UL * 1000UL;
+constexpr unsigned long ASSISTANT_MIN_RECORD_MS = 600;
+// Questions remembered in one conversation (older ones are dropped).
+constexpr int ASSISTANT_MAX_TURNS = 8;
+
 // Kitchen timer: when time is up, an old wind-up bell rings for 2 s every
 // TIMER_RING_EVERY_MS, for TIMER_RING_MS in total (4 rings).
 constexpr unsigned long TIMER_RING_MS = 10UL * 1000UL;
@@ -123,6 +131,8 @@ constexpr int AUDIO_I2S_MCLK_PIN = 16;
 constexpr int AUDIO_I2S_BCLK_PIN = 9;
 constexpr int AUDIO_I2S_WS_PIN = 45;
 constexpr int AUDIO_I2S_DOUT_PIN = 8;
+// Microphone (analog, through the ES8311's ADC) comes back on this pin.
+constexpr int AUDIO_I2S_DIN_PIN = 10;
 constexpr int AUDIO_PA_ENABLE_PIN = 46;
 
 // ============= Touch =============

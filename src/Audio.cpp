@@ -13,7 +13,7 @@ constexpr i2s_port_t kPort = I2S_NUM_0;
 constexpr int kRate = 24000;
 constexpr int kChunk = 256; // frames per write
 
-enum Sound : uint32_t { kNone = 0, kChime = 1, kBlip = 2, kAlarm = 3 };
+enum Sound : uint32_t { kNone = 0, kChime = 1, kBlip = 2, kAlarm = 3, kRecord = 4 };
 // The timer alarm is never quieter than this, even with the volume at 0 %.
 constexpr int kAlarmMinVolume = 50;
 
@@ -25,6 +25,17 @@ bool ready = false;
 volatile bool playing = false;
 volatile bool abortSound = false;
 
+// Microphone. Both I2S channels are kept (halved to kMicRate); the louder one
+// is used, so it doesn't matter which slot the codec puts the ADC on.
+constexpr int kMicMaxSamples = 16 * kMicRate; // a little over the 15 s limit
+int16_t *micBuf[2] = {nullptr, nullptr};
+volatile bool micStop = false;
+volatile bool micBusy = false;
+volatile float micLvl = 0;
+volatile unsigned long micMaxMs = 0;
+size_t micCount = 0;
+int micChannel = 0;
+
 struct I2cGuard {
   I2cGuard() { if (i2c) xSemaphoreTake(i2c, portMAX_DELAY); }
   ~I2cGuard() { if (i2c) xSemaphoreGive(i2c); }
@@ -32,7 +43,7 @@ struct I2cGuard {
 
 bool initHardware() {
   i2s_config_t cfg = {};
-  cfg.mode = static_cast<i2s_mode_t>(I2S_MODE_MASTER | I2S_MODE_TX);
+  cfg.mode = static_cast<i2s_mode_t>(I2S_MODE_MASTER | I2S_MODE_TX | I2S_MODE_RX);
   cfg.sample_rate = kRate;
   cfg.bits_per_sample = I2S_BITS_PER_SAMPLE_16BIT;
   cfg.channel_format = I2S_CHANNEL_FMT_RIGHT_LEFT;
@@ -52,7 +63,7 @@ bool initHardware() {
   pins.bck_io_num = AUDIO_I2S_BCLK_PIN;
   pins.ws_io_num = AUDIO_I2S_WS_PIN;
   pins.data_out_num = AUDIO_I2S_DOUT_PIN;
-  pins.data_in_num = I2S_PIN_NO_CHANGE;
+  pins.data_in_num = AUDIO_I2S_DIN_PIN;
   i2s_set_pin(kPort, &pins);
 
   I2cGuard lock;
@@ -68,6 +79,8 @@ bool initHardware() {
     Serial.println("[Audio] ES8311 init failed");
     return false;
   }
+  es8311_microphone_config(codec, false); // analog microphone
+  es8311_microphone_gain_set(codec, ES8311_MIC_GAIN_24DB);
   Serial.println("[Audio] ready");
   return true;
 }
@@ -183,12 +196,89 @@ void play(uint32_t sound) {
   i2s_stop(kPort);
 }
 
+// Records until stopRecording() or the time limit, on the audio task.
+void record() {
+  if (!ready) ready = initHardware();
+  for (int c = 0; c < 2; c++) {
+    if (!micBuf[c]) {
+      micBuf[c] = static_cast<int16_t *>(
+          heap_caps_malloc(kMicMaxSamples * sizeof(int16_t), MALLOC_CAP_SPIRAM));
+    }
+  }
+  micCount = 0;
+  if (!ready || !micBuf[0] || !micBuf[1]) return;
+  static int16_t buf[kChunk * 2];
+  digitalWrite(AUDIO_PA_ENABLE_PIN, LOW); // speaker off while listening
+  i2s_start(kPort);
+  // Throw away the first 80 ms (old DMA data and the codec settling).
+  const int skipFrames = kRate * 80 / 1000;
+  int skipped = 0;
+  int32_t acc[2] = {0, 0};
+  int accN = 0;
+  double energy[2] = {0, 0};
+  const unsigned long start = millis();
+  while (!micStop && millis() - start < micMaxMs && micCount < static_cast<size_t>(kMicMaxSamples)) {
+    size_t got = 0;
+    i2s_read(kPort, buf, sizeof(buf), &got, pdMS_TO_TICKS(100));
+    const int frames = got / 4;
+    int32_t peak = 0;
+    for (int i = 0; i < frames; i++) {
+      if (skipped < skipFrames) {
+        skipped++;
+        continue;
+      }
+      acc[0] += buf[i * 2];
+      acc[1] += buf[i * 2 + 1];
+      if (++accN < 2) continue;
+      for (int c = 0; c < 2; c++) {
+        const int16_t v = static_cast<int16_t>(acc[c] / 2);
+        micBuf[c][micCount] = v;
+        energy[c] += static_cast<double>(v) * v;
+        if (abs(v) > peak) peak = abs(v);
+        acc[c] = 0;
+      }
+      accN = 0;
+      if (++micCount >= static_cast<size_t>(kMicMaxSamples)) break;
+    }
+    // Level meter: peak of this chunk on a rough log scale.
+    const float l = peak > 0 ? (log10f(static_cast<float>(peak)) - 2.0f) / 2.5f : 0;
+    micLvl = constrain(l, 0.0f, 1.0f);
+  }
+  i2s_stop(kPort);
+  micLvl = 0;
+  micChannel = energy[1] > energy[0] ? 1 : 0;
+  // Remove DC, then normalise to about -3 dB (at most 8x louder).
+  int16_t *m = micBuf[micChannel];
+  if (micCount > 0) {
+    int64_t sum = 0;
+    for (size_t i = 0; i < micCount; i++) sum += m[i];
+    const int32_t dc = static_cast<int32_t>(sum / static_cast<int64_t>(micCount));
+    int32_t peak = 1;
+    for (size_t i = 0; i < micCount; i++) {
+      const int32_t v = m[i] - dc;
+      if (abs(v) > peak) peak = abs(v);
+    }
+    const float gain = min(8.0f, 23000.0f / peak);
+    for (size_t i = 0; i < micCount; i++) {
+      const int32_t v = static_cast<int32_t>((m[i] - dc) * gain);
+      m[i] = static_cast<int16_t>(constrain(v, -32768, 32767));
+    }
+  }
+  Serial.printf("[Audio] recorded %u ms (channel %d)\n",
+                static_cast<unsigned>(micCount * 1000 / kMicRate), micChannel);
+}
+
 void audioTask(void *) {
   for (;;) {
     uint32_t sound = kNone;
     xTaskNotifyWait(0, UINT32_MAX, &sound, portMAX_DELAY);
     abortSound = false;
-    if (sound != kNone) play(sound);
+    if (sound == kRecord) {
+      record();
+      micBusy = false;
+    } else if (sound != kNone) {
+      play(sound);
+    }
     playing = false;
   }
 }
@@ -205,24 +295,44 @@ void begin(SemaphoreHandle_t i2cMutex) {
 void setVolume(int percent) { volume = constrain(percent, 0, 100); }
 
 void playChime() {
-  if (!task) return;
+  if (!task || micBusy) return; // never into the microphone
   playing = true;
   xTaskNotify(task, kChime, eSetValueWithOverwrite);
 }
 
 void playBlip() {
-  if (!task) return;
+  if (!task || micBusy) return; // never into the microphone
   playing = true;
   xTaskNotify(task, kBlip, eSetValueWithOverwrite);
 }
 
 void playAlarm() {
-  if (!task) return;
+  if (!task || micBusy) return; // never into the microphone
   playing = true;
   xTaskNotify(task, kAlarm, eSetValueWithOverwrite);
 }
 
 void stop() { abortSound = true; }
+
+bool startRecording(unsigned long maxMs) {
+  if (!task || playing || micBusy) return false;
+  micStop = false;
+  micMaxMs = maxMs;
+  micBusy = true;
+  xTaskNotify(task, kRecord, eSetValueWithOverwrite);
+  return true;
+}
+
+void stopRecording() { micStop = true; }
+
+bool recording() { return micBusy; }
+
+float micLevel() { return micLvl; }
+
+const int16_t *recordedSamples(size_t &count) {
+  count = micCount;
+  return micBuf[micChannel];
+}
 
 bool busy() { return playing; }
 

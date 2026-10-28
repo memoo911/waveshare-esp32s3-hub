@@ -1,6 +1,6 @@
 #pragma once
 
-// Speaker: ES8311 codec over I2S plus the amplifier enable pin. Sounds are
+// Speaker and microphone: ES8311 codec over I2S plus the amplifier enable pin. Sounds are
 // synthesized (no audio files) and played by a small task, so play() returns
 // at once. The codec shares the I2C bus with the PMU and touch chip; pass the
 // same mutex they use.
@@ -29,5 +29,21 @@ void stop();
 
 // True from play*() until the sound has finished.
 bool busy();
+
+// --- Microphone -------------------------------------------------------------
+// Sample rate of the recording (the codec runs at 24 kHz, halved).
+constexpr int kMicRate = 12000;
+
+// Starts recording (at most maxMs). False if a sound is playing or the codec
+// isn't ready. Stops by itself at maxMs.
+bool startRecording(unsigned long maxMs);
+void stopRecording();
+// True from startRecording() until the samples are ready.
+bool recording();
+// Recent loudness 0..1, for the level meter.
+float micLevel();
+// The last recording: mono, 16-bit, kMicRate, DC removed and normalised.
+// Valid until the next startRecording().
+const int16_t *recordedSamples(size_t &count);
 
 } // namespace audio
